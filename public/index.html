@@ -255,8 +255,8 @@
       <label>Your name (shown on votes and comments)</label>
       <input id="cfg-name" placeholder="e.g. Maya" />
     </div>
-    <button class="config-btn" onclick="saveConfig()">Connect and open board</button>
-    <div class="config-err" id="cfg-err">Could not connect — check your URL and key.</div>
+    <button class="config-btn" id="cfg-btn" onclick="saveConfig()">Connect and open board</button>
+    <div class="config-err" id="cfg-err" style="display:none"></div>
   </div>
 </div>
 
@@ -395,29 +395,39 @@ function saveConfig() {
   const url=document.getElementById('cfg-url').value.trim();
   const key=document.getElementById('cfg-key').value.trim();
   const name=document.getElementById('cfg-name').value.trim();
-  if(!url||!key||!name){document.getElementById('cfg-err').style.display='block';document.getElementById('cfg-err').textContent='All fields are required.';return;}
+  const err=document.getElementById('cfg-err');
+  const btn=document.getElementById('cfg-btn');
+  err.style.display='none';
+  if(!url||!key||!name){err.style.display='block';err.textContent='All fields are required.';return;}
+  if(!url.startsWith('https://')){err.style.display='block';err.textContent='Project URL must start with https://';return;}
+  btn.textContent='Connecting...';btn.disabled=true;
   localStorage.setItem('db_url',url);localStorage.setItem('db_key',key);localStorage.setItem('db_name',name);
   init(url,key,name);
 }
 function resetConfig() {
-  localStorage.removeItem('db_url');localStorage.removeItem('db_key');
+  localStorage.removeItem('db_url');localStorage.removeItem('db_key');localStorage.removeItem('db_name');
   location.reload();
 }
 function saveName() { localStorage.setItem('db_name',who()); }
 
 async function init(url,key,name) {
+  const err=document.getElementById('cfg-err');
+  const btn=document.getElementById('cfg-btn');
   try {
-    supabase = window.supabase.createClient(url, key);
-    const {error}=await supabase.from('initiatives').select('key').limit(1);
-    if(error) throw error;
+    if(!window.supabase){throw new Error('Supabase library not loaded — check your internet connection and reload.');}
+    supabase = window.supabase.createClient(url, key, {auth:{persistSession:false}});
+    const {data,error}=await supabase.from('initiatives').select('key').limit(1);
+    if(error){throw new Error(error.message||error.code||JSON.stringify(error));}
     document.getElementById('config-screen').style.display='none';
     document.getElementById('app').style.display='block';
     document.getElementById('who-input').value=name;
     await loadAll();
     subscribeRealtime();
   } catch(e) {
-    document.getElementById('cfg-err').style.display='block';
-    document.getElementById('cfg-err').textContent='Could not connect: '+e.message;
+    if(btn){btn.textContent='Connect and open board';btn.disabled=false;}
+    err.style.display='block';
+    err.textContent='Could not connect: '+(e.message||String(e));
+    console.error('Init error:',e);
   }
 }
 
