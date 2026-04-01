@@ -1,0 +1,710 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Daybreak — Product Priorities</title>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.min.js"></script>
+<style>
+  :root {
+    --bg: #ffffff;
+    --bg2: #f7f7f5;
+    --bg3: #f0efe9;
+    --text: #1a1a18;
+    --text2: #6b6b67;
+    --text3: #9b9b96;
+    --border: rgba(0,0,0,0.10);
+    --border2: rgba(0,0,0,0.18);
+    --border3: rgba(0,0,0,0.28);
+    --blue-bg: #e6f1fb;
+    --blue-text: #0c447c;
+    --blue-border: #85b7eb;
+    --green-bg: #eaf3de;
+    --green-text: #27500a;
+    --green-border: #97c459;
+    --red-bg: #fcebeb;
+    --red-text: #791f1f;
+    --red-border: #f09595;
+    --amber-bg: #faeeda;
+    --amber-text: #633806;
+    --amber-border: #ef9f27;
+    --radius: 8px;
+    --radius-lg: 12px;
+    --font: -apple-system, 'Helvetica Neue', Arial, sans-serif;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --bg: #1c1c1a;
+      --bg2: #242422;
+      --bg3: #2c2c2a;
+      --text: #f0efe9;
+      --text2: #9b9b96;
+      --text3: #6b6b67;
+      --border: rgba(255,255,255,0.10);
+      --border2: rgba(255,255,255,0.18);
+      --border3: rgba(255,255,255,0.28);
+      --blue-bg: #0c2a4a;
+      --blue-text: #85b7eb;
+      --blue-border: #185fa5;
+      --green-bg: #172804;
+      --green-text: #c0dd97;
+      --green-border: #3b6d11;
+      --red-bg: #300f0f;
+      --red-text: #f09595;
+      --red-border: #a32d2d;
+      --amber-bg: #281800;
+      --amber-text: #fac775;
+      --amber-border: #854f0b;
+    }
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: var(--font); background: var(--bg); color: var(--text); font-size: 15px; line-height: 1.5; }
+
+  /* CONFIG SCREEN */
+  #config-screen { min-height: 100vh; display: flex; align-items: center; justify-content: center; padding: 2rem; background: var(--bg); }
+  .config-card { background: var(--bg); border: 0.5px solid var(--border2); border-radius: var(--radius-lg); padding: 2rem; width: 100%; max-width: 480px; }
+  .config-card h1 { font-size: 20px; font-weight: 500; margin-bottom: 4px; }
+  .config-card p { font-size: 13px; color: var(--text2); margin-bottom: 1.5rem; line-height: 1.6; }
+  .config-step { margin-bottom: 1.25rem; }
+  .config-step label { display: block; font-size: 12px; color: var(--text2); margin-bottom: 5px; }
+  .config-step input { width: 100%; padding: 9px 12px; border: 0.5px solid var(--border2); border-radius: var(--radius); background: var(--bg2); color: var(--text); font-size: 13px; font-family: monospace; }
+  .config-step input:focus { outline: none; border-color: var(--border3); }
+  .config-hint { font-size: 11px; color: var(--text3); margin-top: 4px; }
+  .config-btn { width: 100%; padding: 10px; background: var(--text); color: var(--bg); border: none; border-radius: var(--radius); font-size: 14px; font-weight: 500; cursor: pointer; margin-top: 0.5rem; }
+  .config-btn:hover { opacity: 0.85; }
+  .config-err { font-size: 12px; color: var(--red-text); margin-top: 8px; display: none; }
+
+  /* MAIN APP */
+  #app { display: none; }
+  .app-wrap { max-width: 900px; margin: 0 auto; padding: 0 1.25rem 3rem; }
+
+  /* HEADER */
+  .hdr { padding: 1.25rem 0 1rem; border-bottom: 0.5px solid var(--border); margin-bottom: 1rem; display: flex; align-items: flex-start; justify-content: space-between; gap: 12px; flex-wrap: wrap; }
+  .hdr-left h1 { font-size: 20px; font-weight: 500; }
+  .hdr-left .sub { font-size: 13px; color: var(--text2); margin-top: 3px; }
+  .hdr-right { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; }
+  .btn { font-size: 13px; padding: 7px 14px; border: 0.5px solid var(--border2); border-radius: var(--radius); background: var(--bg); color: var(--text); cursor: pointer; white-space: nowrap; font-family: var(--font); }
+  .btn:hover { background: var(--bg2); }
+  .btn-primary { background: var(--text); color: var(--bg); border-color: var(--text); }
+  .btn-primary:hover { opacity: 0.85; background: var(--text); }
+  .btn-pres { background: var(--blue-bg); color: var(--blue-text); border-color: var(--blue-border); }
+  .btn-pres:hover { opacity: 0.85; }
+
+  /* WHO AM I */
+  .who-bar { background: var(--bg2); border: 0.5px solid var(--border); border-radius: var(--radius); padding: 10px 14px; margin-bottom: 1rem; display: flex; align-items: center; gap: 10px; font-size: 13px; }
+  .who-bar input { border: 0.5px solid var(--border2); border-radius: var(--radius); padding: 5px 10px; font-size: 13px; background: var(--bg); color: var(--text); font-family: var(--font); }
+  .who-bar span { color: var(--text2); }
+
+  /* CONTROLS */
+  .ctrl-row { display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 1rem; }
+  .ctrl-row select, .ctrl-row input[type=text] { font-size: 13px; padding: 7px 10px; border: 0.5px solid var(--border2); border-radius: var(--radius); background: var(--bg); color: var(--text); font-family: var(--font); }
+  .ctrl-row input[type=text] { width: 190px; }
+
+  /* STATS */
+  .stats { display: grid; grid-template-columns: repeat(4, minmax(0,1fr)); gap: 10px; margin-bottom: 1rem; }
+  .stat { background: var(--bg2); border-radius: var(--radius); padding: .75rem 1rem; }
+  .stat-lbl { font-size: 12px; color: var(--text2); margin-bottom: 4px; }
+  .stat-val { font-size: 22px; font-weight: 500; }
+
+  /* CARDS */
+  .list { display: flex; flex-direction: column; gap: 8px; }
+  .card { background: var(--bg); border: 0.5px solid var(--border); border-radius: var(--radius-lg); overflow: hidden; transition: border-color .15s; }
+  .card:hover { border-color: var(--border2); }
+  .card.exp { border-color: var(--border3); }
+  .card-main { display: flex; align-items: flex-start; cursor: pointer; }
+  .rank { width: 34px; min-width: 34px; display: flex; align-items: center; justify-content: center; padding-top: 15px; font-size: 11px; color: var(--text3); font-weight: 500; }
+  .rank.top { color: var(--amber-text); }
+  .vote-col { display: flex; flex-direction: column; align-items: center; padding: 10px; gap: 1px; border-right: 0.5px solid var(--border); min-width: 42px; }
+  .vbtn { background: none; border: none; cursor: pointer; font-size: 13px; padding: 3px 4px; border-radius: 4px; color: var(--text3); line-height: 1; }
+  .vbtn:hover { background: var(--bg2); color: var(--text); }
+  .vbtn.up { color: var(--green-text); }
+  .vbtn.dn { color: var(--red-text); }
+  .vscore { font-size: 12px; font-weight: 500; text-align: center; min-width: 20px; color: var(--text); }
+  .vscore.pos { color: var(--green-text); }
+  .vscore.neg { color: var(--red-text); }
+  .cbody { flex: 1; padding: 11px 13px; min-width: 0; }
+  .ctop { display: flex; align-items: flex-start; justify-content: space-between; gap: 8px; margin-bottom: 5px; }
+  .ctitle { font-size: 14px; font-weight: 500; line-height: 1.4; }
+  .jkey { font-size: 11px; color: var(--blue-text); font-family: monospace; margin-right: 5px; }
+  .badges { display: flex; gap: 4px; flex-wrap: wrap; flex-shrink: 0; }
+  .badge { font-size: 11px; padding: 2px 8px; border-radius: 999px; white-space: nowrap; border: 0.5px solid var(--border); background: var(--bg2); color: var(--text2); }
+  .badge-blue { background: var(--blue-bg); color: var(--blue-text); border-color: var(--blue-border); }
+  .badge-green { background: var(--green-bg); color: var(--green-text); border-color: var(--green-border); }
+  .badge-red { background: var(--red-bg); color: var(--red-text); border-color: var(--red-border); }
+  .badge-amber { background: var(--amber-bg); color: var(--amber-text); border-color: var(--amber-border); }
+  .cmeta { display: flex; gap: 14px; font-size: 12px; color: var(--text2); flex-wrap: wrap; margin-top: 2px; }
+  .exp-btn { background: none; border: none; cursor: pointer; padding: 8px 12px; color: var(--text3); font-size: 12px; align-self: center; flex-shrink: 0; white-space: nowrap; font-family: var(--font); }
+  .exp-btn:hover { color: var(--text); }
+  .detail { border-top: 0.5px solid var(--border); padding: 12px 13px 14px; display: none; }
+  .card.exp .detail { display: block; }
+  .sg { display: grid; grid-template-columns: repeat(4, minmax(0,1fr)); gap: 8px; margin-bottom: 12px; }
+  .si { background: var(--bg2); border-radius: var(--radius); padding: 8px 10px; }
+  .si-lbl { font-size: 11px; color: var(--text2); margin-bottom: 2px; }
+  .si-val { font-size: 16px; font-weight: 500; }
+  .notes-box { font-size: 13px; color: var(--text2); line-height: 1.6; background: var(--bg2); border-radius: var(--radius); padding: 10px 12px; margin-bottom: 12px; }
+  .detail-actions { display: flex; gap: 8px; margin-bottom: 12px; }
+  .detail-actions button { font-size: 12px; padding: 5px 12px; border: 0.5px solid var(--border2); border-radius: var(--radius); background: var(--bg); color: var(--text); cursor: pointer; font-family: var(--font); }
+  .detail-actions button:hover { background: var(--bg2); }
+  .detail-actions .del { color: var(--red-text); border-color: var(--red-border); }
+
+  /* COMMENTS */
+  .comments h4 { font-size: 13px; font-weight: 500; margin-bottom: 8px; }
+  .cmt { display: flex; gap: 9px; margin-bottom: 8px; }
+  .ava { width: 26px; height: 26px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 10px; font-weight: 500; flex-shrink: 0; background: var(--blue-bg); color: var(--blue-text); }
+  .cbub { flex: 1; background: var(--bg2); border-radius: var(--radius); padding: 7px 10px; }
+  .cauth { font-size: 12px; font-weight: 500; }
+  .ctxt { font-size: 12px; color: var(--text2); margin-top: 2px; line-height: 1.5; }
+  .ctime { font-size: 11px; color: var(--text3); margin-top: 3px; }
+  .replies { margin-top: 5px; padding-left: 10px; border-left: 2px solid var(--border2); }
+  .reply { margin-bottom: 4px; font-size: 11px; }
+  .reply-auth { font-weight: 500; }
+  .reply-txt { color: var(--text2); }
+  .reply-form { display: flex; gap: 6px; margin-top: 6px; }
+  .reply-form input { flex: 1; font-size: 12px; padding: 5px 8px; border: 0.5px solid var(--border2); border-radius: var(--radius); background: var(--bg); color: var(--text); font-family: var(--font); }
+  .reply-form button { font-size: 11px; padding: 5px 10px; border: 0.5px solid var(--border2); border-radius: var(--radius); background: var(--bg); color: var(--text); cursor: pointer; white-space: nowrap; font-family: var(--font); }
+  .reply-form button:hover { background: var(--bg2); }
+  .add-cmt { display: flex; gap: 8px; margin-top: 10px; }
+  .add-cmt input { flex: 1; font-size: 13px; padding: 7px 10px; border: 0.5px solid var(--border2); border-radius: var(--radius); background: var(--bg); color: var(--text); font-family: var(--font); }
+  .add-cmt button { font-size: 12px; padding: 7px 12px; border: 0.5px solid var(--border2); border-radius: var(--radius); background: var(--bg); color: var(--text); cursor: pointer; white-space: nowrap; font-family: var(--font); }
+  .add-cmt button:hover { background: var(--bg2); }
+
+  /* MODAL */
+  .overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.4); display: none; align-items: center; justify-content: center; z-index: 100; padding: 1rem; }
+  .overlay.open { display: flex; }
+  .modal { background: var(--bg); border: 0.5px solid var(--border3); border-radius: var(--radius-lg); padding: 1.5rem; width: 100%; max-width: 540px; max-height: 90vh; overflow-y: auto; }
+  .modal h3 { font-size: 16px; font-weight: 500; margin-bottom: 1rem; }
+  .form-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 10px; }
+  .fg { display: flex; flex-direction: column; gap: 4px; }
+  .fg.full { grid-column: 1/-1; }
+  .fg label { font-size: 12px; color: var(--text2); }
+  .fg input, .fg select, .fg textarea { font-size: 13px; padding: 7px 10px; border: 0.5px solid var(--border2); border-radius: var(--radius); background: var(--bg2); color: var(--text); width: 100%; font-family: var(--font); }
+  .fg textarea { resize: vertical; min-height: 70px; }
+  .score-row { display: grid; grid-template-columns: repeat(4,1fr); gap: 8px; margin-bottom: 10px; }
+  .si2 { display: flex; flex-direction: column; gap: 4px; }
+  .si2 label { font-size: 12px; color: var(--text2); }
+  .si2 select { font-size: 13px; padding: 6px 8px; border: 0.5px solid var(--border2); border-radius: var(--radius); background: var(--bg2); color: var(--text); font-family: var(--font); }
+  .score-preview { background: var(--bg2); border-radius: var(--radius); padding: 10px 12px; margin-bottom: 12px; font-size: 13px; color: var(--text2); }
+  .score-preview span { font-weight: 500; color: var(--text); }
+  .modal-btns { display: flex; gap: 8px; justify-content: flex-end; }
+  .empty { text-align: center; padding: 3rem; color: var(--text2); font-size: 14px; }
+  .loading { text-align: center; padding: 3rem; color: var(--text3); font-size: 14px; }
+  .live-dot { width: 7px; height: 7px; border-radius: 50%; background: var(--green-text); display: inline-block; margin-right: 5px; animation: pulse 2s infinite; }
+  @keyframes pulse { 0%,100%{opacity:1} 50%{opacity:.4} }
+
+  /* PRESENTATION MODE */
+  #pres-mode { display: none; position: fixed; inset: 0; background: var(--bg); z-index: 200; overflow-y: auto; }
+  #pres-mode.active { display: block; }
+  .pres-wrap { max-width: 1100px; margin: 0 auto; padding: 2.5rem 2rem 4rem; }
+  .pres-hdr { display: flex; align-items: center; justify-content: space-between; margin-bottom: 2rem; padding-bottom: 1.5rem; border-bottom: 0.5px solid var(--border2); }
+  .pres-hdr h1 { font-size: 28px; font-weight: 500; }
+  .pres-hdr .pres-date { font-size: 15px; color: var(--text2); margin-top: 4px; }
+  .pres-stats { display: grid; grid-template-columns: repeat(4, minmax(0,1fr)); gap: 16px; margin-bottom: 2.5rem; }
+  .pres-stat { background: var(--bg2); border-radius: var(--radius-lg); padding: 1.25rem 1.5rem; }
+  .pres-stat-lbl { font-size: 13px; color: var(--text2); margin-bottom: 6px; }
+  .pres-stat-val { font-size: 32px; font-weight: 500; }
+  .pres-section { margin-bottom: 2rem; }
+  .pres-section h2 { font-size: 13px; font-weight: 500; color: var(--text2); text-transform: uppercase; letter-spacing: .06em; margin-bottom: 1rem; }
+  .pres-grid { display: grid; grid-template-columns: repeat(2, minmax(0,1fr)); gap: 12px; }
+  .pres-card { background: var(--bg); border: 0.5px solid var(--border2); border-radius: var(--radius-lg); padding: 1.25rem 1.5rem; }
+  .pres-card.rank-1 { border-color: var(--amber-border); border-width: 1.5px; }
+  .pres-card-top { display: flex; align-items: flex-start; justify-content: space-between; gap: 12px; margin-bottom: 10px; }
+  .pres-rank { font-size: 12px; font-weight: 500; color: var(--text3); min-width: 24px; }
+  .pres-rank.gold { color: var(--amber-text); }
+  .pres-title { font-size: 15px; font-weight: 500; line-height: 1.4; flex: 1; }
+  .pres-score-big { font-size: 28px; font-weight: 500; color: var(--text); min-width: 60px; text-align: right; }
+  .pres-score-lbl { font-size: 11px; color: var(--text3); text-align: right; margin-top: -2px; }
+  .pres-card-meta { display: flex; gap: 10px; flex-wrap: wrap; }
+  .pres-pill { font-size: 12px; padding: 3px 10px; border-radius: 999px; }
+  .pres-votes { font-size: 13px; color: var(--text2); margin-top: 8px; }
+  .pres-notes { font-size: 12px; color: var(--text2); margin-top: 8px; line-height: 1.5; border-top: 0.5px solid var(--border); padding-top: 8px; }
+  .pres-full-list { display: flex; flex-direction: column; gap: 0; border: 0.5px solid var(--border); border-radius: var(--radius-lg); overflow: hidden; }
+  .pres-row { display: flex; align-items: center; gap: 0; border-bottom: 0.5px solid var(--border); }
+  .pres-row:last-child { border-bottom: none; }
+  .pres-row-rank { width: 44px; text-align: center; font-size: 12px; color: var(--text3); padding: 12px 0; font-weight: 500; flex-shrink: 0; }
+  .pres-row-rank.gold { color: var(--amber-text); }
+  .pres-row-body { flex: 1; padding: 12px 14px; min-width: 0; border-left: 0.5px solid var(--border); }
+  .pres-row-title { font-size: 14px; font-weight: 500; }
+  .pres-row-sub { font-size: 12px; color: var(--text2); margin-top: 2px; }
+  .pres-row-right { display: flex; align-items: center; gap: 16px; padding: 12px 16px; flex-shrink: 0; border-left: 0.5px solid var(--border); }
+  .pres-row-score { font-size: 18px; font-weight: 500; min-width: 44px; text-align: right; }
+  .pres-row-rev { font-size: 12px; color: var(--green-text); font-weight: 500; min-width: 80px; text-align: right; }
+  .pres-exit { font-size: 13px; padding: 8px 16px; border: 0.5px solid var(--border2); border-radius: var(--radius); background: var(--bg); color: var(--text); cursor: pointer; font-family: var(--font); }
+  .pres-exit:hover { background: var(--bg2); }
+  .pres-phase-group { margin-bottom: 1.5rem; }
+  .pres-phase-label { font-size: 12px; font-weight: 500; color: var(--text2); letter-spacing: .04em; margin-bottom: 8px; }
+</style>
+</head>
+<body>
+
+<!-- CONFIG SCREEN -->
+<div id="config-screen">
+  <div class="config-card">
+    <h1>Daybreak priorities</h1>
+    <p>Connect your Supabase project to get started. These credentials are saved in your browser — you only need to do this once.</p>
+    <div class="config-step">
+      <label>Supabase project URL</label>
+      <input id="cfg-url" placeholder="https://xxxxxxxxxxxx.supabase.co" />
+      <div class="config-hint">Found in Supabase → Settings → API → Project URL</div>
+    </div>
+    <div class="config-step">
+      <label>Supabase anon key</label>
+      <input id="cfg-key" placeholder="eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..." />
+      <div class="config-hint">Found in Supabase → Settings → API → anon / public key</div>
+    </div>
+    <div class="config-step">
+      <label>Your name (shown on votes and comments)</label>
+      <input id="cfg-name" placeholder="e.g. Maya" />
+    </div>
+    <button class="config-btn" onclick="saveConfig()">Connect and open board</button>
+    <div class="config-err" id="cfg-err">Could not connect — check your URL and key.</div>
+  </div>
+</div>
+
+<!-- MAIN APP -->
+<div id="app">
+  <div class="app-wrap">
+    <div class="hdr">
+      <div class="hdr-left">
+        <h1>Daybreak product priorities</h1>
+        <div class="sub" id="status-line"><span class="live-dot"></span>Live — changes sync across all team members</div>
+      </div>
+      <div class="hdr-right">
+        <button class="btn btn-pres" onclick="openPres()">Presentation mode</button>
+        <button class="btn btn-primary" onclick="openModal()">+ Add initiative</button>
+        <button class="btn" onclick="resetConfig()" style="font-size:12px;color:var(--text3)">Switch account</button>
+      </div>
+    </div>
+
+    <div class="who-bar">
+      <span>Voting and commenting as:</span>
+      <input id="who-input" placeholder="Your name" style="width:160px" oninput="saveName()" />
+      <span style="color:var(--text3);font-size:12px">— visible to your whole team</span>
+    </div>
+
+    <div class="ctrl-row">
+      <input type="text" id="search" placeholder="Search initiatives..." oninput="render()" />
+      <select id="phase-f" onchange="render()">
+        <option value="">All phases</option>
+        <option>Ready for Release</option>
+        <option>Testing</option>
+        <option>Development</option>
+        <option>Product Scoping</option>
+        <option>Requirements Ready, Not Started</option>
+        <option>Requirements Not Ready</option>
+        <option>Blocked by Stakeholder</option>
+      </select>
+      <select id="sort-f" onchange="render()">
+        <option value="combined">Sort: community rank</option>
+        <option value="score">Sort: formula score</option>
+        <option value="revenue">Sort: revenue impact</option>
+        <option value="votes">Sort: team votes</option>
+      </select>
+      <select id="req-f" onchange="render()">
+        <option value="">All requestors</option>
+      </select>
+    </div>
+
+    <div class="stats" id="stats"></div>
+    <div class="list" id="list"><div class="loading">Loading initiatives...</div></div>
+  </div>
+</div>
+
+<!-- ADD / EDIT MODAL -->
+<div class="overlay" id="overlay">
+  <div class="modal">
+    <h3 id="modal-title">Add new initiative</h3>
+    <div class="form-grid">
+      <div class="fg"><label>Jira key</label><input id="f-key" placeholder="DAY-XXXX" /></div>
+      <div class="fg"><label>Requestor</label><input id="f-req" placeholder="Name" /></div>
+      <div class="fg full"><label>Title</label><input id="f-title" placeholder="Short description" /></div>
+      <div class="fg"><label>Phase</label>
+        <select id="f-phase">
+          <option>Ready for Release</option><option>Testing</option><option>Development</option>
+          <option>Product Scoping</option><option>Requirements Ready, Not Started</option>
+          <option>Requirements Not Ready</option><option>Blocked by Stakeholder</option>
+        </select>
+      </div>
+      <div class="fg"><label>Revenue impact ($/mo)</label><input id="f-rev" type="number" placeholder="0" /></div>
+      <div class="fg full"><label>Notes / context</label><textarea id="f-notes" placeholder="Value, cost savings, or any other context..."></textarea></div>
+    </div>
+    <div class="score-row">
+      <div class="si2"><label>Effort & cost (20%)</label><select id="f-effort"><option>1</option><option>2</option><option>3</option><option>4</option><option>5</option></select></div>
+      <div class="si2"><label>Value $ (28%)</label><select id="f-value"><option>1</option><option>2</option><option>3</option><option>4</option><option>5</option></select></div>
+      <div class="si2"><label>Importance (25%)</label><select id="f-imp"><option>1</option><option>2</option><option>3</option><option>4</option><option>5</option></select></div>
+      <div class="si2"><label>Urgency (27%)</label><select id="f-urg"><option>1</option><option>2</option><option>3</option><option>4</option><option>5</option></select></div>
+    </div>
+    <div class="score-preview">Calculated score: <span id="score-prev">—</span></div>
+    <div class="modal-btns">
+      <button class="btn" onclick="closeModal()">Cancel</button>
+      <button class="btn btn-primary" id="modal-save-btn" onclick="saveInitiative()">Add initiative</button>
+    </div>
+  </div>
+</div>
+
+<!-- PRESENTATION MODE -->
+<div id="pres-mode">
+  <div class="pres-wrap">
+    <div class="pres-hdr">
+      <div>
+        <h1>Daybreak product priorities</h1>
+        <div class="pres-date" id="pres-date"></div>
+      </div>
+      <button class="pres-exit" onclick="closePres()">Exit presentation</button>
+    </div>
+    <div class="pres-stats" id="pres-stats"></div>
+    <div class="pres-section">
+      <h2>Top initiatives — community ranked</h2>
+      <div class="pres-grid" id="pres-top"></div>
+    </div>
+    <div class="pres-section">
+      <h2>Full ranked list</h2>
+      <div class="pres-full-list" id="pres-full"></div>
+    </div>
+  </div>
+</div>
+
+<script>
+let supabase = null;
+let items = [];
+let votes = {};
+let comments = {};
+let expanded = null;
+let editKey = null;
+
+function phColor(p) {
+  if(p.includes('Release')) return 'green';
+  if(p.includes('Testing')) return 'blue';
+  if(p.includes('Blocked')) return 'red';
+  if(p.includes('Scoping')||p.includes('Development')) return 'amber';
+  return '';
+}
+function initials(n) { return n.split(' ').map(x=>x[0]).join('').toUpperCase().slice(0,2); }
+function fmtRev(r) { return r ? '$'+r.toLocaleString()+'/mo' : '—'; }
+function who() { return (document.getElementById('who-input')||{}).value?.trim() || 'Anonymous'; }
+function calcScore(e,v,i,u) { return Math.round(((e/5)*20+(v/5)*28+(i/5)*25+(u/5)*27)*10)/10; }
+function netVote(key) { const v=votes[key]||{}; return Object.values(v).reduce((s,x)=>s+x,0); }
+function userVote(key) { const v=votes[key]||{}; return v[who()]||0; }
+function combined(key) { const item=items.find(i=>i.key===key); if(!item)return 0; return item.score+(netVote(key)*8); }
+function timeAgo(ts) {
+  const d=Date.now()-new Date(ts).getTime();
+  if(d<60000)return'just now'; if(d<3600000)return Math.floor(d/60000)+'m ago';
+  if(d<86400000)return Math.floor(d/3600000)+'h ago'; return Math.floor(d/86400000)+'d ago';
+}
+
+function saveConfig() {
+  const url=document.getElementById('cfg-url').value.trim();
+  const key=document.getElementById('cfg-key').value.trim();
+  const name=document.getElementById('cfg-name').value.trim();
+  if(!url||!key||!name){document.getElementById('cfg-err').style.display='block';document.getElementById('cfg-err').textContent='All fields are required.';return;}
+  localStorage.setItem('db_url',url);localStorage.setItem('db_key',key);localStorage.setItem('db_name',name);
+  init(url,key,name);
+}
+function resetConfig() {
+  localStorage.removeItem('db_url');localStorage.removeItem('db_key');
+  location.reload();
+}
+function saveName() { localStorage.setItem('db_name',who()); }
+
+async function init(url,key,name) {
+  try {
+    supabase = window.supabase.createClient(url, key);
+    const {error}=await supabase.from('initiatives').select('key').limit(1);
+    if(error) throw error;
+    document.getElementById('config-screen').style.display='none';
+    document.getElementById('app').style.display='block';
+    document.getElementById('who-input').value=name;
+    await loadAll();
+    subscribeRealtime();
+  } catch(e) {
+    document.getElementById('cfg-err').style.display='block';
+    document.getElementById('cfg-err').textContent='Could not connect: '+e.message;
+  }
+}
+
+async function loadAll() {
+  const [iRes,vRes,cRes]=await Promise.all([
+    supabase.from('initiatives').select('*').order('score',{ascending:false}),
+    supabase.from('votes').select('*'),
+    supabase.from('comments').select('*').order('created_at',{ascending:true})
+  ]);
+  items=iRes.data||[];
+  votes={};
+  (vRes.data||[]).forEach(v=>{if(!votes[v.initiative_key])votes[v.initiative_key]={};votes[v.initiative_key][v.user_name]=v.value;});
+  comments={};
+  const flat=cRes.data||[];
+  const top=flat.filter(c=>!c.parent_id);
+  top.forEach(c=>{if(!comments[c.initiative_key])comments[c.initiative_key]=[];comments[c.initiative_key].push({...c,replies:flat.filter(r=>r.parent_id===c.id)});});
+  populateRequestorFilter();
+  render();
+}
+
+function subscribeRealtime() {
+  supabase.channel('all').on('postgres_changes',{event:'*',schema:'public'},()=>loadAll()).subscribe();
+}
+
+function getFiltered() {
+  const s=document.getElementById('search').value.toLowerCase();
+  const ph=document.getElementById('phase-f').value;
+  const so=document.getElementById('sort-f').value;
+  const rq=document.getElementById('req-f').value;
+  let list=items.filter(i=>{
+    const ms=!s||i.title.toLowerCase().includes(s)||i.key.toLowerCase().includes(s)||i.requestor.toLowerCase().includes(s);
+    return ms&&(!ph||i.phase===ph)&&(!rq||i.requestor===rq);
+  });
+  list.sort((a,b)=>{
+    if(so==='score')return b.score-a.score;
+    if(so==='revenue')return b.revenue-a.revenue;
+    if(so==='votes')return netVote(b.key)-netVote(a.key);
+    return combined(b.key)-combined(a.key);
+  });
+  return list;
+}
+
+function populateRequestorFilter() {
+  const sel=document.getElementById('req-f');
+  const cur=sel.value;
+  const reqs=[...new Set(items.map(i=>i.requestor))].sort();
+  sel.innerHTML='<option value="">All requestors</option>'+reqs.map(r=>`<option${r===cur?' selected':''}>${r}</option>`).join('');
+}
+
+async function vote(key,dir,e) {
+  e.stopPropagation();
+  const uv=userVote(key);
+  const newVal=uv===dir?0:dir;
+  const name=who();
+  if(!name){alert('Enter your name above before voting.');return;}
+  await supabase.from('votes').upsert({initiative_key:key,user_name:name,value:newVal},{onConflict:'initiative_key,user_name'});
+  if(!votes[key])votes[key]={};votes[key][name]=newVal;
+  render();
+}
+
+async function addComment(key) {
+  const inp=document.getElementById('ci-'+key);
+  const t=inp.value.trim();if(!t)return;
+  const name=who();if(!name){alert('Enter your name above first.');return;}
+  await supabase.from('comments').insert({initiative_key:key,author:name,text:t,parent_id:null});
+  inp.value='';
+}
+
+async function addReply(key,cid) {
+  const inp=document.getElementById('ri-'+key+'-'+cid);
+  const t=inp.value.trim();if(!t)return;
+  const name=who();if(!name){alert('Enter your name above first.');return;}
+  await supabase.from('comments').insert({initiative_key:key,author:name,text:t,parent_id:cid});
+  inp.value='';
+}
+
+function toggleExpand(key){expanded=expanded===key?null:key;render();}
+
+function openModal(key) {
+  editKey=key||null;
+  const isEdit=!!key;
+  document.getElementById('modal-title').textContent=isEdit?'Edit initiative':'Add new initiative';
+  document.getElementById('modal-save-btn').textContent=isEdit?'Save changes':'Add initiative';
+  if(isEdit){
+    const item=items.find(i=>i.key===key);if(!item)return;
+    document.getElementById('f-key').value=item.key;document.getElementById('f-key').disabled=true;
+    document.getElementById('f-req').value=item.requestor;document.getElementById('f-title').value=item.title;
+    document.getElementById('f-phase').value=item.phase;document.getElementById('f-rev').value=item.revenue||0;
+    document.getElementById('f-notes').value=item.notes||'';
+    document.getElementById('f-effort').value=item.effort;document.getElementById('f-value').value=item.value;
+    document.getElementById('f-imp').value=item.importance;document.getElementById('f-urg').value=item.urgency;
+  } else {
+    document.getElementById('f-key').value='';document.getElementById('f-key').disabled=false;
+    document.getElementById('f-req').value='';document.getElementById('f-title').value='';
+    document.getElementById('f-phase').value='Product Scoping';document.getElementById('f-rev').value='';
+    document.getElementById('f-notes').value='';
+    ['f-effort','f-value','f-imp','f-urg'].forEach(id=>document.getElementById(id).value='3');
+  }
+  updateScorePreview();
+  document.getElementById('overlay').classList.add('open');
+}
+function closeModal(){document.getElementById('overlay').classList.remove('open');editKey=null;}
+function updateScorePreview(){
+  const s=calcScore(+document.getElementById('f-effort').value,+document.getElementById('f-value').value,+document.getElementById('f-imp').value,+document.getElementById('f-urg').value);
+  document.getElementById('score-prev').textContent=s;
+}
+['f-effort','f-value','f-imp','f-urg'].forEach(id=>document.getElementById(id)?.addEventListener('change',updateScorePreview));
+
+async function saveInitiative() {
+  const key=document.getElementById('f-key').value.trim().toUpperCase();
+  const title=document.getElementById('f-title').value.trim();
+  const requestor=document.getElementById('f-req').value.trim();
+  if(!key||!title||!requestor){alert('Jira key, title, and requestor are required.');return;}
+  const effort=+document.getElementById('f-effort').value;
+  const value=+document.getElementById('f-value').value;
+  const importance=+document.getElementById('f-imp').value;
+  const urgency=+document.getElementById('f-urg').value;
+  const score=calcScore(effort,value,importance,urgency);
+  const revenue=parseInt(document.getElementById('f-rev').value)||0;
+  const notes=document.getElementById('f-notes').value.trim();
+  const phase=document.getElementById('f-phase').value;
+  const data={key,title,requestor,phase,effort,value,importance,urgency,score,revenue,notes,is_new:!editKey,updated_at:new Date().toISOString()};
+  if(editKey){
+    await supabase.from('initiatives').update(data).eq('key',editKey);
+  } else {
+    const existing=items.find(i=>i.key===key);if(existing){alert('An initiative with this key already exists.');return;}
+    await supabase.from('initiatives').insert(data);
+  }
+  closeModal();
+}
+
+async function deleteItem(key,e) {
+  e.stopPropagation();
+  if(!confirm('Remove "'+key+'" from the board? This cannot be undone.'))return;
+  await supabase.from('initiatives').delete().eq('key',key);
+  if(expanded===key)expanded=null;
+}
+
+function renderStats(list) {
+  const totalRev=list.reduce((s,i)=>s+i.revenue,0);
+  const sorted=[...list].sort((a,b)=>combined(b.key)-combined(a.key));
+  const topScore=sorted.length?Math.round(combined(sorted[0].key)):0;
+  const totalVotes=Object.values(votes).reduce((s,v)=>s+Object.values(v).reduce((a,x)=>a+Math.abs(x),0),0);
+  document.getElementById('stats').innerHTML=`
+    <div class="stat"><div class="stat-lbl">Initiatives</div><div class="stat-val">${list.length}</div></div>
+    <div class="stat"><div class="stat-lbl">Top community score</div><div class="stat-val">${topScore}</div></div>
+    <div class="stat"><div class="stat-lbl">Revenue pipeline</div><div class="stat-val">$${Math.round(totalRev/1000)}k/mo</div></div>
+    <div class="stat"><div class="stat-lbl">Votes cast</div><div class="stat-val">${totalVotes}</div></div>
+  `;
+}
+
+function render() {
+  const list=getFiltered();
+  renderStats(list);
+  if(!list.length){document.getElementById('list').innerHTML='<div class="empty">No initiatives match your filters.</div>';return;}
+  document.getElementById('list').innerHTML=list.map((item,idx)=>{
+    const nv=netVote(item.key);const uv=userVote(item.key);
+    const pc=phColor(item.phase);const isExp=expanded===item.key;
+    const cmts=comments[item.key]||[];
+    const ccount=cmts.reduce((s,c)=>s+1+(c.replies?c.replies.length:0),0);
+    const cs=Math.round(combined(item.key));const isTop=idx<3;
+    const cmtsHTML=cmts.map(c=>`
+      <div class="cmt">
+        <div class="ava">${initials(c.author)}</div>
+        <div class="cbub">
+          <div class="cauth">${c.author}</div>
+          <div class="ctxt">${c.text}</div>
+          ${c.replies&&c.replies.length?`<div class="replies">${c.replies.map(r=>`<div class="reply"><span class="reply-auth">${r.author}: </span><span class="reply-txt">${r.text}</span></div>`).join('')}</div>`:''}
+          <div class="reply-form">
+            <input id="ri-${item.key}-${c.id}" placeholder="Reply..." onkeydown="if(event.key==='Enter')addReply('${item.key}',${c.id})" />
+            <button onclick="addReply('${item.key}',${c.id})">Reply</button>
+          </div>
+          <div class="ctime">${timeAgo(c.created_at)}</div>
+        </div>
+      </div>`).join('');
+    return `<div class="card${isExp?' exp':''}" id="card-${item.key}">
+      <div class="card-main" onclick="toggleExpand('${item.key}')">
+        <div class="rank${isTop?' top':''}">${idx+1}</div>
+        <div class="vote-col" onclick="event.stopPropagation()">
+          <button class="vbtn${uv===1?' up':''}" onclick="vote('${item.key}',1,event)">▲</button>
+          <span class="vscore${nv>0?' pos':nv<0?' neg':''}">${nv>0?'+'+nv:nv}</span>
+          <button class="vbtn${uv===-1?' dn':''}" onclick="vote('${item.key}',-1,event)">▼</button>
+        </div>
+        <div class="cbody">
+          <div class="ctop">
+            <div class="ctitle"><span class="jkey">${item.key}</span>${item.title}</div>
+            <div class="badges">
+              ${item.is_new?'<span class="badge badge-amber">New</span>':''}
+              ${pc?`<span class="badge badge-${pc}">${item.phase}</span>`:`<span class="badge">${item.phase}</span>`}
+              <span class="badge badge-blue">Score ${cs}</span>
+              ${item.revenue?`<span class="badge badge-green">${fmtRev(item.revenue)}</span>`:''}
+            </div>
+          </div>
+          <div class="cmeta">
+            <span>${item.requestor}</span><span>Effort ${item.effort}/5</span>
+            <span>Value ${item.value}/5</span><span>Importance ${item.importance}/5</span><span>Urgency ${item.urgency}/5</span>
+            ${ccount?`<span>${ccount} comment${ccount!==1?'s':''}</span>`:''}
+          </div>
+        </div>
+        <button class="exp-btn">${isExp?'Collapse ▲':'Details ▼'}</button>
+      </div>
+      ${isExp?`<div class="detail">
+        <div class="sg">
+          <div class="si"><div class="si-lbl">Effort & cost (20%)</div><div class="si-val">${item.effort}/5</div></div>
+          <div class="si"><div class="si-lbl">Value $ (28%)</div><div class="si-val">${item.value}/5</div></div>
+          <div class="si"><div class="si-lbl">Importance (25%)</div><div class="si-val">${item.importance}/5</div></div>
+          <div class="si"><div class="si-lbl">Urgency (27%)</div><div class="si-val">${item.urgency}/5</div></div>
+        </div>
+        ${item.notes?`<div class="notes-box">${item.notes}</div>`:''}
+        <div class="detail-actions">
+          <button onclick="openModal('${item.key}')">Edit</button>
+          <button class="del" onclick="deleteItem('${item.key}',event)">Remove</button>
+        </div>
+        <div class="comments">
+          <h4>Discussion${ccount?' ('+ccount+')':''}</h4>
+          ${cmtsHTML}
+          <div class="add-cmt">
+            <input id="ci-${item.key}" placeholder="Add a comment..." onkeydown="if(event.key==='Enter')addComment('${item.key}')" />
+            <button onclick="addComment('${item.key}')">Post</button>
+          </div>
+        </div>
+      </div>`:''}
+    </div>`;
+  }).join('');
+}
+
+function openPres() {
+  const now=new Date();
+  document.getElementById('pres-date').textContent=now.toLocaleDateString('en-US',{weekday:'long',year:'numeric',month:'long',day:'numeric'});
+  const sorted=[...items].sort((a,b)=>combined(b.key)-combined(a.key));
+  const totalRev=items.reduce((s,i)=>s+i.revenue,0);
+  const totalVotes=Object.values(votes).reduce((s,v)=>s+Object.values(v).reduce((a,x)=>a+Math.abs(x),0),0);
+  const top=sorted[0];
+  document.getElementById('pres-stats').innerHTML=`
+    <div class="pres-stat"><div class="pres-stat-lbl">Total initiatives</div><div class="pres-stat-val">${items.length}</div></div>
+    <div class="pres-stat"><div class="pres-stat-lbl">Top ranked score</div><div class="pres-stat-val">${top?Math.round(combined(top.key)):0}</div></div>
+    <div class="pres-stat"><div class="pres-stat-lbl">Revenue pipeline</div><div class="pres-stat-val">$${Math.round(totalRev/1000)}k/mo</div></div>
+    <div class="pres-stat"><div class="pres-stat-lbl">Team votes cast</div><div class="pres-stat-val">${totalVotes}</div></div>
+  `;
+  const top6=sorted.slice(0,6);
+  document.getElementById('pres-top').innerHTML=top6.map((item,idx)=>{
+    const pc=phColor(item.phase);const nv=netVote(item.key);
+    const cmts=comments[item.key]||[];const ccount=cmts.reduce((s,c)=>s+1+(c.replies?c.replies.length:0),0);
+    return `<div class="pres-card${idx===0?' rank-1':''}">
+      <div class="pres-card-top">
+        <div>
+          <div class="pres-rank${idx===0?' gold':''}">No. ${idx+1}</div>
+          <div class="pres-title">${item.title}</div>
+        </div>
+        <div>
+          <div class="pres-score-big">${Math.round(combined(item.key))}</div>
+          <div class="pres-score-lbl">score</div>
+        </div>
+      </div>
+      <div class="pres-card-meta">
+        ${pc?`<span class="pres-pill badge badge-${pc}">${item.phase}</span>`:`<span class="pres-pill badge">${item.phase}</span>`}
+        ${item.revenue?`<span class="pres-pill badge badge-green">${fmtRev(item.revenue)}</span>`:''}
+        ${nv!==0?`<span class="pres-pill badge${nv>0?' badge-green':' badge-red'}">${nv>0?'+'+nv:nv} votes</span>`:''}
+        <span class="pres-pill badge">${item.requestor}</span>
+      </div>
+      ${item.notes?`<div class="pres-notes">${item.notes.slice(0,160)}${item.notes.length>160?'…':''}</div>`:''}
+      ${ccount?`<div class="pres-votes" style="margin-top:8px;font-size:12px;color:var(--text3)">${ccount} comment${ccount!==1?'s':''} in discussion</div>`:''}
+    </div>`;
+  }).join('');
+  document.getElementById('pres-full').innerHTML=sorted.map((item,idx)=>{
+    const nv=netVote(item.key);const pc=phColor(item.phase);
+    return `<div class="pres-row">
+      <div class="pres-row-rank${idx<3?' gold':''}">${idx+1}</div>
+      <div class="pres-row-body">
+        <div class="pres-row-title"><span style="font-size:11px;color:var(--blue-text);font-family:monospace;margin-right:5px">${item.key}</span>${item.title}</div>
+        <div class="pres-row-sub">${item.requestor} · ${item.phase}${nv!==0?' · '+(nv>0?'+':'')+nv+' votes':''}</div>
+      </div>
+      <div class="pres-row-right">
+        ${item.revenue?`<div class="pres-row-rev">${fmtRev(item.revenue)}</div>`:'<div class="pres-row-rev" style="color:var(--text3)">—</div>'}
+        <div class="pres-row-score">${Math.round(combined(item.key))}</div>
+      </div>
+    </div>`;
+  }).join('');
+  document.getElementById('pres-mode').classList.add('active');
+}
+function closePres(){document.getElementById('pres-mode').classList.remove('active');}
+document.addEventListener('keydown',e=>{if(e.key==='Escape'){closePres();closeModal();}});
+
+const savedUrl=localStorage.getItem('db_url');
+const savedKey=localStorage.getItem('db_key');
+const savedName=localStorage.getItem('db_name');
+if(savedUrl&&savedKey&&savedName){init(savedUrl,savedKey,savedName);}
+</script>
+</body>
+</html>
