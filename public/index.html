@@ -263,12 +263,32 @@
 
   .btn-jira{background:#0052cc;color:#fff;border-color:#0052cc;font-size:12px;padding:5px 12px;border-radius:var(--radius);border:none;cursor:pointer;font-family:var(--font);white-space:nowrap}
   .btn-jira:hover{background:#0747a6}
+
+  #pw-screen{min-height:100vh;display:flex;align-items:center;justify-content:center;padding:2rem;background:var(--bg)}
+  .pw-card{background:var(--bg);border:0.5px solid var(--border2);border-radius:var(--radius-lg);padding:2rem;width:100%;max-width:380px;text-align:center}
+  .pw-card h1{font-size:20px;font-weight:500;margin-bottom:6px}
+  .pw-card p{font-size:13px;color:var(--text2);margin-bottom:1.5rem}
+  .pw-card input{width:100%;padding:10px 12px;border:0.5px solid var(--border2);border-radius:var(--radius);background:var(--bg2);color:var(--text);font-size:14px;font-family:var(--font);text-align:center;letter-spacing:.1em;margin-bottom:10px}
+  .pw-card input:focus{outline:none;border-color:var(--border3)}
+  .pw-btn{width:100%;padding:10px;background:var(--text);color:var(--bg);border:none;border-radius:var(--radius);font-size:14px;font-weight:500;cursor:pointer;font-family:var(--font)}
+  .pw-btn:hover{opacity:.85}
+  .pw-err{font-size:12px;color:var(--red-text);margin-top:8px;display:none}
 </style>
 </head>
 <body>
 
 <!-- CONFIG SCREEN -->
-<div id="config-screen">
+<div id="pw-screen">
+  <div class="pw-card">
+    <h1>Daybreak priorities</h1>
+    <p>Enter the team password to access the board.</p>
+    <input id="pw-input" type="password" placeholder="Password" onkeydown="if(event.key==='Enter')checkPassword()" autofocus />
+    <button class="pw-btn" onclick="checkPassword()">Continue</button>
+    <div class="pw-err" id="pw-err">Incorrect password. Try again.</div>
+  </div>
+</div>
+
+<div id="config-screen" style="display:none">
   <div class="config-card">
     <h1>Daybreak priorities</h1>
     <p>Enter your name to get started. It will appear on your votes and comments.</p>
@@ -868,10 +888,43 @@ function openInJira(key) {
   );
 }
 
-const savedUrl='https://wwjdypjpkawvnknevdgd.supabase.co';
-const savedKey='eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Ind3amR5cGpwa2F3dm5rbmV2ZGdkIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzUwNzgwMTcsImV4cCI6MjA5MDY1NDAxN30.g-wxdMWQvAsuk1UFr_Zub_UHEzBVCOH7bnKaj3KMBWY';
-const savedName=localStorage.getItem('db_name');
-if(savedName){init(savedUrl,savedKey,savedName);}
+const TEAM_PASSWORD = 'Daybreak963';
+
+function checkPassword() {
+  const input = document.getElementById('pw-input').value;
+  const err = document.getElementById('pw-err');
+  if(input === TEAM_PASSWORD) {
+    localStorage.setItem('pw_ok', '1');
+    document.getElementById('pw-screen').style.display = 'none';
+    // Now show config or app
+    bootApp();
+  } else {
+    err.style.display = 'block';
+    document.getElementById('pw-input').value = '';
+    document.getElementById('pw-input').focus();
+  }
+}
+
+function bootApp() {
+  const savedName = localStorage.getItem('db_name');
+  if(savedName) {
+    // Already configured — go straight to app
+    const savedUrl = 'https://wwjdypjpkawvnknevdgd.supabase.co';
+    const savedKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Ind3amR5cGpwa2F3dm5rbmV2ZGdkIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzUwNzgwMTcsImV4cCI6MjA5MDY1NDAxN30.g-wxdMWQvAsuk1UFr_Zub_UHEzBVCOH7bnKaj3KMBWY';
+    init(savedUrl, savedKey, savedName);
+  } else {
+    document.getElementById('config-screen').style.display = 'flex';
+  }
+}
+
+// Boot: check password first
+if(localStorage.getItem('pw_ok')==='1') {
+  document.getElementById('pw-screen').style.display='none';
+  bootApp();
+} else {
+  document.getElementById('pw-screen').style.display='flex';
+  document.getElementById('config-screen').style.display='none';
+}
 </script>
 </body>
 </html>
