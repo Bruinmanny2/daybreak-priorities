@@ -273,6 +273,14 @@
   .pw-btn{width:100%;padding:10px;background:var(--text);color:var(--bg);border:none;border-radius:var(--radius);font-size:14px;font-weight:500;cursor:pointer;font-family:var(--font)}
   .pw-btn:hover{opacity:.85}
   .pw-err{font-size:12px;color:var(--red-text);margin-top:8px;display:none}
+
+  .flag-btn{background:none;border:0.5px solid var(--border2);border-radius:var(--radius);cursor:pointer;font-size:12px;padding:4px 10px;color:var(--text2);font-family:var(--font);white-space:nowrap;transition:all .15s}
+  .flag-btn:hover{border-color:var(--amber-border);color:var(--amber-text);background:var(--amber-bg)}
+  .flag-btn.flagged{background:var(--amber-bg);color:var(--amber-text);border-color:var(--amber-border);font-weight:500}
+  .badge-flag{background:var(--amber-bg);color:var(--amber-text);border-color:var(--amber-border)}
+  .sync-banner{background:var(--amber-bg);border:0.5px solid var(--amber-border);border-radius:var(--radius);padding:8px 14px;margin-bottom:1rem;font-size:13px;color:var(--amber-text);display:flex;align-items:center;justify-content:space-between;gap:12px}
+  .sync-banner strong{font-weight:500}
+  .sync-banner span{color:var(--amber-text);opacity:.8;font-size:12px}
 </style>
 </head>
 <body>
@@ -327,6 +335,7 @@
       <input type="text" id="search" placeholder="Search initiatives..." oninput="render()" />
       <select id="phase-f" onchange="render()">
         <option value="">All phases</option>
+        <option value="__flagged__">★ Flagged for sync</option>
         <option>Ready for Release</option>
         <option>Testing</option>
         <option>Development</option>
@@ -347,6 +356,7 @@
     </div>
 
     <div class="stats" id="stats"></div>
+    <div id="sync-banner"></div>
     <div class="list" id="list"><div class="loading">Loading initiatives...</div></div>
   </div>
 </div>
@@ -550,7 +560,8 @@ function getFiltered() {
   const rq=document.getElementById('req-f').value;
   let list=items.filter(i=>{
     const ms=!s||i.title.toLowerCase().includes(s)||i.key.toLowerCase().includes(s)||i.requestor.toLowerCase().includes(s);
-    return ms&&(!ph||i.phase===ph)&&(!rq||i.requestor===rq);
+    const mf=ph==='__flagged__'?flagged.has(i.key):(!ph||i.phase===ph);
+    return ms&&mf&&(!rq||i.requestor===rq);
   });
   list.sort((a,b)=>{
     if(so==='score')return b.score-a.score;
@@ -702,7 +713,23 @@ function renderStats(list) {
 
 function render() {
   const list=getFiltered();
+  // Sort flagged items to top within their current sort order
+  list.sort((a,b)=>{
+    const af=flagged.has(a.key)?1:0;
+    const bf=flagged.has(b.key)?1:0;
+    return bf-af;
+  });
   renderStats(list);
+  // Sync banner
+  const flaggedItems=list.filter(i=>flagged.has(i.key));
+  const banner=document.getElementById('sync-banner');
+  if(banner){
+    if(flaggedItems.length){
+      banner.innerHTML=`<div class="sync-banner"><div><strong>★ ${flaggedItems.length} initiative${flaggedItems.length!==1?'s':''} flagged for this week's sync</strong><span style="display:block;margin-top:2px">${flaggedItems.map(i=>i.title.slice(0,40)+(i.title.length>40?'…':'')).join(' · ')}</span></div><span>${flaggedItems.length} item${flaggedItems.length!==1?'s':''}</span></div>`;
+    } else {
+      banner.innerHTML='';
+    }
+  }
   if(!list.length){document.getElementById('list').innerHTML='<div class="empty">No initiatives match your filters.</div>';return;}
   document.getElementById('list').innerHTML=list.map((item,idx)=>{
     const nv=netVote(item.key);const uv=userVote(item.key);
@@ -736,7 +763,7 @@ function render() {
           <div class="ctop">
             <div class="ctitle"><span class="jkey">${item.key}</span>${item.title}</div>
             <div class="badges">
-              ${item.is_new?'<span class="badge badge-amber">New</span>':''}
+              ${item.is_new?'<span class="badge badge-amber">New</span>':''}${flagged.has(item.key)?'<span class="badge badge-flag">For sync</span>':''}
               ${pc?`<span class="badge badge-${pc}">${item.phase}</span>`:`<span class="badge">${item.phase}</span>`}
               <span class="badge badge-blue">Score ${cs}</span>
               ${item.revenue?`<span class="badge badge-green">${fmtRev(item.revenue)}</span>`:''}
@@ -748,7 +775,7 @@ function render() {
             ${ccount?`<span>${ccount} comment${ccount!==1?'s':''}</span>`:''}
           </div>
         </div>
-        <button class="exp-btn">${isExp?'Collapse ▲':'Details ▼'}</button>
+        <button class="flag-btn" style="align-self:center;margin-right:4px;padding:4px 8px" onclick="toggleFlag(''+item.key+'',event)" title="${flagged.has(item.key)?'Remove flag':'Flag for sync'}">${flagged.has(item.key)?'★':'☆'}</button><button class="exp-btn">${isExp?'Collapse ▲':'Details ▼'}</button>
       </div>
       ${isExp?`<div class="detail">
         <div class="sg">${scoringConfig.dims.map(d=>`<div class='si'><div class='si-lbl'>${d.label} (${d.weight}%)</div><div class='si-val'>${item[d.id]!==undefined?item[d.id]+'/5':'—'}</div></div>`).join('')}</div>
@@ -756,6 +783,7 @@ function render() {
         ${(()=>{const vobj=votes[item.key]||{};const up=Object.entries(vobj).filter(([,v])=>v===1).map(([n])=>n);const dn=Object.entries(vobj).filter(([,v])=>v===-1).map(([n])=>n);if(!up.length&&!dn.length)return '<p style="font-size:12px;color:var(--text3);margin-bottom:12px">No votes yet.</p>';return '<div class="voters">'+(up.length?`<div class="voter-group"><div class="voter-group-lbl">▲ Upvoted by</div><div class="voter-chips">${up.map(n=>`<span class="voter-chip up">${n}</span>`).join('')}</div></div>`:'')+( dn.length?`<div class="voter-group"><div class="voter-group-lbl">▼ Downvoted by</div><div class="voter-chips">${dn.map(n=>`<span class="voter-chip dn">${n}</span>`).join('')}</div></div>`:'')+' </div>';})()}
         <div class="detail-actions">
           <button onclick="openModal('${item.key}')">Edit</button>
+          <button class="flag-btn${flagged.has(item.key)?' flagged':''}" onclick="toggleFlag('${item.key}',event)">${flagged.has(item.key)?'★ Flagged for sync':'☆ Flag for sync'}</button>
           <button class="btn-jira" onclick="openInJira('${item.key}')">${/^[A-Z]+-\d+$/.test(item.key)?'Open in Jira':'Create in Jira'}</button>
           <button class="del" onclick="deleteItem('${item.key}',event)">Remove</button>
         </div>
@@ -861,6 +889,28 @@ async function saveSettings(){
   msg.style.display='block';
   setTimeout(()=>{msg.style.display='none';},2500);
   closeSettings();
+  render();
+}
+
+let flagged = new Set();
+
+async function loadFlagged() {
+  try {
+    const {data} = await db.from('sync_flags').select('initiative_key');
+    if(data) data.forEach(r=>flagged.add(r.initiative_key));
+  } catch(e) { /* table may not exist yet */ }
+}
+
+async function toggleFlag(key, e) {
+  e.stopPropagation();
+  const isFlagged = flagged.has(key);
+  if(isFlagged) {
+    flagged.delete(key);
+    try { await db.from('sync_flags').delete().eq('initiative_key',key); } catch(e){}
+  } else {
+    flagged.add(key);
+    try { await db.from('sync_flags').insert({initiative_key:key,flagged_by:who(),flagged_at:new Date().toISOString()}); } catch(e){}
+  }
   render();
 }
 
