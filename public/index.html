@@ -742,16 +742,22 @@ async function saveInitiative() {
   const title=document.getElementById('f-title').value.trim();
   const requestor=document.getElementById('f-req').value.trim();
   if(!key||!title||!requestor){alert('Jira key, title, and requestor are required.');return;}
-  const effort=+document.getElementById('f-effort').value;
-  const value=+document.getElementById('f-value').value;
-  const importance=+document.getElementById('f-imp').value;
-  const urgency=+document.getElementById('f-urg').value;
-  const score=calcScore(effort,value,importance,urgency);
+  // Read all dimension values dynamically
+  const dimVals={};
+  scoringConfig.dims.forEach(d=>{
+    const el=document.getElementById('f-dim-'+d.id);
+    dimVals[d.id]=el?+el.value:3;
+  });
+  const effort=dimVals.effort||3;
+  const value=dimVals.value||3;
+  const importance=dimVals.importance||3;
+  const urgency=dimVals.urgency||3;
+  const score=scoringConfig.dims.reduce((s,d)=>s+(((dimVals[d.id]||3)/5)*d.weight),0);
   const revenue=parseInt(document.getElementById('f-rev').value)||0;
   const notes=document.getElementById('f-notes').value.trim();
   const phase=document.getElementById('f-phase').value;
-  const startWeek=document.getElementById('f-start-week').value||null;
-  const durationWeeks=parseInt(document.getElementById('f-duration').value)||null;
+  const swEl=document.getElementById('f-start-week');const startWeek=swEl&&swEl.value?swEl.value:null;
+  const durEl=document.getElementById('f-duration');const durationWeeks=durEl&&durEl.value?parseInt(durEl.value)||null:null;
   const data={key,title,requestor,phase,effort,value,importance,urgency,score,revenue,notes,start_week:startWeek,duration_weeks:durationWeeks,is_new:!editKey,updated_at:new Date().toISOString()};
   if(editKey){
     await db.from('initiatives').update(data).eq('key',editKey);
@@ -1070,122 +1076,159 @@ function closeRoadmap() {
 
 function renderRoadmap() {
   const filterVal = document.getElementById('rm-filter').value;
-  const groupVal = document.getElementById('rm-group').value;
+  const groupVal  = document.getElementById('rm-group').value;
 
   let list = items.filter(i => {
-    if(filterVal === 'scheduled') return i.start_week;
-    if(filterVal === 'flagged') return flagged.has(i.key);
+    if(filterVal==='scheduled') return i.start_week;
+    if(filterVal==='flagged')   return flagged.has(i.key);
     return true;
   });
 
-  const scheduled = list.filter(i=>i.start_week);
+  const scheduled   = list.filter(i=>i.start_week);
   const unscheduled = list.filter(i=>!i.start_week);
 
-  // Build 52 weeks of 2026
   const YEAR = 2026;
-  const weeks = Array.from({length:52},(_,i)=>i+1);
+  const MONTHS = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
   const today = new Date();
   const todayWeek = today.getFullYear()===YEAR ? getWeekNumber(today) : null;
 
-  // Month headers
-  const monthNames = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
-  const weekMonths = weeks.map(w => {
-    const d = weekToDate(YEAR, w);
+  // Map week → month
+  const weekMonths = Array.from({length:53},(_,i)=>{
+    if(i===0) return 0;
+    const d = weekToDate(YEAR,i);
     return d.getMonth();
   });
 
-  // Group items
+  // Build month spans
+  const monthSpans = [];
+  let cur = weekMonths[1], spanStart = 1;
+  for(let w=2;w<=53;w++){
+    if(w===53||weekMonths[w]!==cur){
+      monthSpans.push({month:cur,start:spanStart,count:w-spanStart});
+      cur=weekMonths[w]; spanStart=w;
+    }
+  }
+
+  // Group
   let groups = [];
-  if(groupVal === 'none') {
-    groups = [{label: null, items: scheduled}];
-  } else if(groupVal === 'phase') {
-    const phaseOrder = ['Ready for Release','Testing','Development','Product Scoping','Requirements Ready, Not Started','Requirements Not Ready','Blocked by Stakeholder'];
-    phaseOrder.forEach(ph => {
-      const g = scheduled.filter(i=>i.phase===ph);
-      if(g.length) groups.push({label:ph, items:g});
+  if(groupVal==='none'){
+    groups=[{label:null,items:scheduled}];
+  } else if(groupVal==='phase'){
+    const order=['Ready for Release','Testing','Development','Product Scoping',
+      'Requirements Ready, Not Started','Requirements Not Ready','Blocked by Stakeholder'];
+    order.forEach(ph=>{
+      const g=scheduled.filter(i=>i.phase===ph);
+      if(g.length) groups.push({label:ph,items:g});
     });
-    const other = scheduled.filter(i=>!phaseOrder.includes(i.phase));
-    if(other.length) groups.push({label:'Other', items:other});
+    const rest=scheduled.filter(i=>!order.includes(i.phase));
+    if(rest.length) groups.push({label:'Other',items:rest});
   } else {
-    const reqs = [...new Set(scheduled.map(i=>i.requestor))].sort();
-    reqs.forEach(r => groups.push({label:r, items:scheduled.filter(i=>i.requestor===r)}));
+    [...new Set(scheduled.map(i=>i.requestor))].sort().forEach(r=>{
+      groups.push({label:r,items:scheduled.filter(i=>i.requestor===r)});
+    });
   }
 
   // Legend
-  const usedPhases = [...new Set(scheduled.map(i=>i.phase))];
-  document.getElementById('rm-legend').innerHTML = usedPhases.map(ph=>`
+  const usedPhases=[...new Set(scheduled.map(i=>i.phase))];
+  document.getElementById('rm-legend').innerHTML=usedPhases.map(ph=>`
     <div class="rm-legend-item">
-      <div class="rm-legend-dot" style="background:${PHASE_BG[ph]||'#e2e2e2'};border:1px solid ${PHASE_COLORS[ph]||'#999'}"></div>
-      <span style="font-size:12px;color:var(--text2)">${ph}</span>
+      <div class="rm-legend-dot" style="background:${PHASE_BG[ph]||'#e2e2e2'};border:1.5px solid ${PHASE_COLORS[ph]||'#999'}"></div>
+      <span>${ph}</span>
     </div>`).join('');
 
-  // Build month spans for header
-  let monthSpans = [];
-  let curMonth = weekMonths[0], spanStart = 0;
-  for(let i=1;i<=52;i++){
-    if(i===52||weekMonths[i]!==curMonth){
-      monthSpans.push({month:curMonth,start:spanStart,count:i-spanStart});
-      if(i<52){curMonth=weekMonths[i];spanStart=i;}
-    }
+  // Build table
+  const COL=24; // px per week column
+  let html=`<table class="rm-table" style="table-layout:fixed">`;
+
+  // Row 1: month headers
+  html+=`<thead><tr><th style="width:200px;min-width:200px;text-align:left;padding-left:10px;position:sticky;left:0;background:var(--bg);z-index:2">Initiative</th>`;
+  monthSpans.forEach(ms=>{
+    html+=`<th class="month-hdr" colspan="${ms.count}" style="width:${ms.count*COL}px;border-left:1px solid var(--border2)">${MONTHS[ms.month]}</th>`;
+  });
+  html+=`</tr>`;
+
+  // Row 2: week numbers
+  html+=`<tr><th style="position:sticky;left:0;background:var(--bg2);z-index:2"></th>`;
+  for(let w=1;w<=52;w++){
+    const isDiv = w>1 && weekMonths[w]!==weekMonths[w-1];
+    const isToday = w===todayWeek;
+    const showNum = w===1||w%4===0;
+    html+=`<th style="width:${COL}px;font-size:9px;font-weight:400;color:${isToday?'var(--red-text)':'var(--text3)'};${isDiv?'border-left:1px solid var(--border2)':''}${isToday?';background:rgba(252,235,235,0.4)':''}">${showNum?w:''}</th>`;
+  }
+  html+=`</tr></thead><tbody>`;
+
+  if(scheduled.length===0){
+    html+=`<tr><td colspan="53" style="text-align:center;padding:3rem;color:var(--text3);font-size:13px">No scheduled initiatives yet.<br>Edit any initiative and set a start week to see it here.</td></tr>`;
   }
 
-  let html = '<table class="rm-table"><thead><tr>';
-  html += '<th style="text-align:left;padding-left:10px;min-width:180px">Initiative</th>';
-  monthSpans.forEach(ms => {
-    html += `<th class="month-hdr" colspan="${ms.count}" style="border-left:1px solid var(--border2)">${monthNames[ms.month]}</th>`;
-  });
-  html += '</tr><tr><th></th>';
-  weeks.forEach(w => {
-    const isMonthDiv = w>1 && weekMonths[w-1] !== weekMonths[w-2];
-    html += `<th class="${isMonthDiv?'rm-month-div':''} ${todayWeek===w?'rm-today':''}" style="font-size:10px">${w%4===0?w:''}</th>`;
-  });
-  html += '</tr></thead><tbody>';
-
-  groups.forEach(group => {
-    if(group.label) {
-      html += `<tr><td colspan="53" style="font-size:11px;font-weight:500;color:var(--text2);padding:10px 10px 4px;background:var(--bg2);letter-spacing:.04em;text-transform:uppercase">${group.label}</td></tr>`;
+  groups.forEach(group=>{
+    if(group.label){
+      html+=`<tr><td colspan="53" style="font-size:11px;font-weight:500;color:var(--text2);padding:10px 10px 4px;background:var(--bg3);letter-spacing:.05em;text-transform:uppercase;position:sticky;left:0">${group.label}</td></tr>`;
     }
-    group.items.forEach(item => {
-      const sw = parseStartWeek(item);
+    group.items.forEach(item=>{
+      const sw=parseStartWeek(item);
       if(!sw) return;
-      const dur = item.duration_weeks || 2;
-      const startW = sw.year === YEAR ? sw.week : (sw.year < YEAR ? 1 : null);
+      const dur=Math.max(item.duration_weeks||2,1);
+      const startW=sw.year===YEAR?sw.week:sw.year<YEAR?1:null;
       if(!startW) return;
-      const endW = Math.min(startW + dur - 1, 52);
-      const color = PHASE_COLORS[item.phase] || '#888';
-      const bg = PHASE_BG[item.phase] || '#e2e2e2';
+      const endW=Math.min(startW+dur-1,52);
+      const color=PHASE_COLORS[item.phase]||'#888';
+      const bg=PHASE_BG[item.phase]||'#e2e2e2';
+      const isFlagged=flagged.has(item.key);
+      const cs=Math.round(combined(item.key));
 
-      html += `<tr onclick="void(0)"><td class="label-cell" title="${item.title}"><span class="rm-key">${item.key}</span>${item.title.slice(0,35)}${item.title.length>35?'…':''}</td>`;
-      weeks.forEach(w => {
-        const isMonthDiv = w>1 && weekMonths[w-1] !== weekMonths[w-2];
-        const inRange = w>=startW && w<=endW;
-        const isStart = w===startW;
-        const isEnd = w===endW;
-        const isSolo = startW===endW;
-        let barClass = '';
-        if(inRange){barClass = isSolo?'solo':isStart?'start':isEnd?'end-bar':'mid';}
-        html += `<td class="week-cell${isMonthDiv?' rm-month-div':''}${todayWeek===w?' rm-today':''}">`;
+      html+=`<tr style="height:36px">`;
+      html+=`<td class="label-cell" style="width:200px;min-width:200px;max-width:200px;cursor:pointer;border-right:0.5px solid var(--border2);position:sticky;left:0;background:var(--bg);z-index:1" onclick="closeRoadmap();setTimeout(()=>toggleExpand('${item.key}'),50)" title="${item.title}">`;
+      html+=`<span style="font-size:10px;color:var(--blue-text);font-family:monospace;margin-right:4px">${item.key}</span>`;
+      html+=`<span style="font-size:12px">${item.title.slice(0,26)}${item.title.length>26?'…':''}</span>`;
+      if(isFlagged) html+=` <span style="color:var(--amber-text);font-size:10px">★</span>`;
+      html+=`</td>`;
+
+      for(let w=1;w<=52;w++){
+        const isDiv=w>1&&weekMonths[w]!==weekMonths[w-1];
+        const isToday=w===todayWeek;
+        const inRange=w>=startW&&w<=endW;
+        const isStart=w===startW;
+        const isEnd=w===endW;
+
+        let cellStyle=`width:${COL}px;padding:6px 0;`;
+        if(isDiv) cellStyle+='border-left:1px solid var(--border2);';
+        if(isToday) cellStyle+='background:rgba(252,235,235,0.3);';
+
+        html+=`<td style="${cellStyle}">`;
         if(inRange){
-          html += `<div class="rm-bar ${barClass}" style="background:${bg};border:1px solid ${color}" onclick="toggleExpand('${item.key}')" title="${item.title} · W${startW}–W${endW} (${dur}w)"></div>`;
+          const br=isStart&&isEnd?'4px':isStart?'4px 0 0 4px':isEnd?'0 4px 4px 0':'0';
+          const ml=isStart?'3px':'0';
+          const mr=isEnd?'3px':'0';
+          html+=`<div style="height:22px;background:${bg};border-top:2px solid ${color};border-bottom:2px solid ${color};${isStart?'border-left:2px solid '+color+';':''} ${isEnd?'border-right:2px solid '+color+';':''} border-radius:${br};margin-left:${ml};margin-right:${mr};cursor:pointer" onclick="closeRoadmap();setTimeout(()=>toggleExpand('${item.key}'),50)" title="${item.title} · W${startW}–W${endW} (${dur} week${dur!==1?'s':''}) · Score ${cs}"></div>`;
+          // Show label at start
+          if(isStart&&dur>=3){
+            html+=`<div style="font-size:9px;color:${color};margin-left:5px;white-space:nowrap;overflow:hidden;max-width:${(dur*COL)-8}px;position:absolute;margin-top:-20px;pointer-events:none">${item.title.slice(0,20)}</div>`;
+          }
         }
-        html += '</td>';
-      });
-      html += '</tr>';
+        html+=`</td>`;
+      }
+      html+=`</tr>`;
     });
   });
-  html += '</tbody></table>';
 
-  document.getElementById('rm-grid').innerHTML = html;
+  html+=`</tbody></table>`;
+  document.getElementById('rm-grid').innerHTML=html;
 
-  // Unscheduled
-  if(unscheduled.length) {
-    document.getElementById('rm-unscheduled').innerHTML = `
-      <h3>Not yet scheduled (${unscheduled.length})</h3>
+  // Unscheduled section
+  if(unscheduled.length){
+    document.getElementById('rm-unscheduled').innerHTML=`
+      <h3 style="font-size:13px;font-weight:500;color:var(--text2);margin-bottom:10px;padding-top:1.5rem;border-top:0.5px solid var(--border)">Not yet scheduled (${unscheduled.length}) — click to open</h3>
       <div class="rm-unscheduled-grid">
-        ${unscheduled.map(i=>`<span class="rm-chip" onclick="closeRoadmap();toggleExpand('${i.key}')" title="Click to open">${i.key}: ${i.title.slice(0,30)}${i.title.length>30?'…':''}</span>`).join('')}
+        ${unscheduled.map(i=>`
+          <span class="rm-chip" onclick="closeRoadmap();setTimeout(()=>toggleExpand('${i.key}'),50)" title="${i.title}">
+            <span style="font-size:10px;color:var(--blue-text);font-family:monospace">${i.key}</span>
+            ${i.title.slice(0,28)}${i.title.length>28?'…':''}
+            ${flagged.has(i.key)?'<span style="color:var(--amber-text)">★</span>':''}
+          </span>`).join('')}
       </div>`;
   } else {
-    document.getElementById('rm-unscheduled').innerHTML = '';
+    document.getElementById('rm-unscheduled').innerHTML='';
   }
 }
 
