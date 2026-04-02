@@ -281,6 +281,48 @@
   .sync-banner{background:var(--amber-bg);border:0.5px solid var(--amber-border);border-radius:var(--radius);padding:8px 14px;margin-bottom:1rem;font-size:13px;color:var(--amber-text);display:flex;align-items:center;justify-content:space-between;gap:12px}
   .sync-banner strong{font-weight:500}
   .sync-banner span{color:var(--amber-text);opacity:.8;font-size:12px}
+
+  /* ROADMAP */
+  #roadmap-mode{display:none;position:fixed;inset:0;background:var(--bg);z-index:200;overflow-y:auto}
+  #roadmap-mode.active{display:block}
+  .rm-wrap{max-width:1200px;margin:0 auto;padding:2rem 1.5rem 4rem}
+  .rm-hdr{display:flex;align-items:center;justify-content:space-between;margin-bottom:1.5rem;padding-bottom:1rem;border-bottom:0.5px solid var(--border2);gap:12px;flex-wrap:wrap}
+  .rm-hdr h1{font-size:22px;font-weight:500}
+  .rm-controls{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+  .rm-controls select{font-size:13px;padding:6px 10px;border:0.5px solid var(--border2);border-radius:var(--radius);background:var(--bg);color:var(--text);font-family:var(--font)}
+  .rm-exit{font-size:13px;padding:7px 14px;border:0.5px solid var(--border2);border-radius:var(--radius);background:var(--bg);color:var(--text);cursor:pointer;font-family:var(--font)}
+  .rm-exit:hover{background:var(--bg2)}
+  .rm-legend{display:flex;gap:12px;flex-wrap:wrap;margin-bottom:1.5rem;font-size:12px}
+  .rm-legend-item{display:flex;align-items:center;gap:6px}
+  .rm-legend-dot{width:10px;height:10px;border-radius:2px;flex-shrink:0}
+  .rm-grid{overflow-x:auto}
+  .rm-table{width:100%;border-collapse:collapse;min-width:900px}
+  .rm-table th{font-size:11px;font-weight:500;color:var(--text2);text-align:center;padding:6px 4px;border-bottom:0.5px solid var(--border2);white-space:nowrap;background:var(--bg)}
+  .rm-table th.month-hdr{border-left:0.5px solid var(--border);font-size:12px;color:var(--text);font-weight:500;background:var(--bg2)}
+  .rm-table td{padding:3px 2px;border-bottom:0.5px solid var(--border);vertical-align:middle}
+  .rm-table td.label-cell{font-size:12px;padding:6px 10px;white-space:nowrap;max-width:220px;overflow:hidden;text-overflow:ellipsis;border-right:0.5px solid var(--border2);position:sticky;left:0;background:var(--bg);z-index:1}
+  .rm-table td.label-cell .rm-key{font-size:10px;color:var(--blue-text);font-family:monospace;display:block}
+  .rm-table td.week-cell{width:28px;min-width:28px;max-width:28px;padding:3px 2px}
+  .rm-bar{height:22px;border-radius:3px;cursor:pointer;transition:opacity .15s}
+  .rm-bar:hover{opacity:.75}
+  .rm-bar.start{border-radius:3px 0 0 3px}
+  .rm-bar.mid{border-radius:0}
+  .rm-bar.end-bar{border-radius:0 3px 3px 0}
+  .rm-bar.solo{border-radius:3px}
+  .rm-today{border-left:2px solid var(--red-text);position:relative}
+  .rm-today::after{content:'today';position:absolute;top:-16px;left:-14px;font-size:9px;color:var(--red-text);white-space:nowrap}
+  .rm-month-div{border-left:1px solid var(--border2)}
+  .rm-no-date{font-size:11px;color:var(--text3);padding:6px 10px;font-style:italic}
+  .rm-unscheduled{margin-top:2rem}
+  .rm-unscheduled h3{font-size:13px;font-weight:500;color:var(--text2);margin-bottom:10px}
+  .rm-unscheduled-grid{display:flex;flex-wrap:wrap;gap:6px}
+  .rm-chip{font-size:11px;padding:3px 10px;border-radius:999px;border:0.5px solid var(--border2);background:var(--bg2);color:var(--text2);cursor:pointer;white-space:nowrap}
+  .rm-chip:hover{border-color:var(--border3);color:var(--text)}
+  /* Date picker in modal */
+  .date-row{display:flex;align-items:center;gap:10px;margin-bottom:10px}
+  .date-row label{font-size:12px;color:var(--text2);min-width:120px}
+  .date-row input[type=week],.date-row input[type=number]{font-size:13px;padding:6px 10px;border:0.5px solid var(--border2);border-radius:var(--radius);background:var(--bg2);color:var(--text);font-family:var(--font)}
+  .date-row input[type=number]{width:80px}
 </style>
 </head>
 <body>
@@ -319,6 +361,7 @@
       </div>
       <div class="hdr-right">
         <button class="btn btn-pres" onclick="openPres()">Presentation mode</button>
+        <button class="btn" onclick="openRoadmap()" style="background:var(--green-bg);color:var(--green-text);border-color:var(--green-border)">2026 Roadmap</button>
         <button class="btn btn-primary" onclick="openModal()">+ Add initiative</button>
         <button class="btn" onclick="openSettings()">Settings</button>
         <button class="btn" onclick="resetConfig()" style="font-size:12px;color:var(--text3)">Switch account</button>
@@ -403,6 +446,8 @@
       </div>
       <div class="fg"><label>Revenue impact ($/mo)</label><input id="f-rev" type="number" placeholder="0" /></div>
       <div class="fg full"><label>Notes / context</label><textarea id="f-notes" placeholder="Value, cost savings, or any other context..."></textarea></div>
+      <div class="fg"><label>Start week (2026)</label><input id="f-start-week" type="week" min="2026-W01" max="2026-W52" /></div>
+      <div class="fg"><label>Duration (weeks)</label><input id="f-duration" type="number" min="1" max="52" placeholder="e.g. 4" /></div>
     </div>
     <div class="score-row" id="modal-dims"></div>
     <div class="score-preview">Calculated score: <span id="score-prev">—</span></div>
@@ -432,6 +477,33 @@
       <h2>Full ranked list</h2>
       <div class="pres-full-list" id="pres-full"></div>
     </div>
+  </div>
+</div>
+
+<div id="roadmap-mode">
+  <div class="rm-wrap">
+    <div class="rm-hdr">
+      <div>
+        <h1>2026 roadmap</h1>
+        <div style="font-size:13px;color:var(--text2);margin-top:3px">Click any bar to open that initiative. Set start week and duration when editing.</div>
+      </div>
+      <div class="rm-controls">
+        <select id="rm-filter" onchange="renderRoadmap()">
+          <option value="">All initiatives</option>
+          <option value="scheduled">Scheduled only</option>
+          <option value="flagged">Flagged for sync</option>
+        </select>
+        <select id="rm-group" onchange="renderRoadmap()">
+          <option value="phase">Group by phase</option>
+          <option value="requestor">Group by requestor</option>
+          <option value="none">No grouping</option>
+        </select>
+        <button class="rm-exit" onclick="closeRoadmap()">Exit roadmap</button>
+      </div>
+    </div>
+    <div class="rm-legend" id="rm-legend"></div>
+    <div class="rm-grid" id="rm-grid"></div>
+    <div class="rm-unscheduled" id="rm-unscheduled"></div>
   </div>
 </div>
 
@@ -625,6 +697,8 @@ function openModal(key) {
     document.getElementById('f-phase').value=item.phase;
     document.getElementById('f-rev').value=item.revenue||0;
     document.getElementById('f-notes').value=item.notes||'';
+    document.getElementById('f-start-week').value=item.start_week||'';
+    document.getElementById('f-duration').value=item.duration_weeks||'';
     scoringConfig.dims.forEach(d=>{
       const el=document.getElementById('f-dim-'+d.id);
       if(el) el.value=item[d.id]!==undefined?item[d.id]:3;
@@ -637,6 +711,8 @@ function openModal(key) {
     document.getElementById('f-phase').value='Product Scoping';
     document.getElementById('f-rev').value='';
     document.getElementById('f-notes').value='';
+    document.getElementById('f-start-week').value='';
+    document.getElementById('f-duration').value='';
     scoringConfig.dims.forEach(d=>{
       const el=document.getElementById('f-dim-'+d.id);
       if(el) el.value=3;
@@ -674,7 +750,9 @@ async function saveInitiative() {
   const revenue=parseInt(document.getElementById('f-rev').value)||0;
   const notes=document.getElementById('f-notes').value.trim();
   const phase=document.getElementById('f-phase').value;
-  const data={key,title,requestor,phase,effort,value,importance,urgency,score,revenue,notes,is_new:!editKey,updated_at:new Date().toISOString()};
+  const startWeek=document.getElementById('f-start-week').value||null;
+  const durationWeeks=parseInt(document.getElementById('f-duration').value)||null;
+  const data={key,title,requestor,phase,effort,value,importance,urgency,score,revenue,notes,start_week:startWeek,duration_weeks:durationWeeks,is_new:!editKey,updated_at:new Date().toISOString()};
   if(editKey){
     await db.from('initiatives').update(data).eq('key',editKey);
   } else {
@@ -855,7 +933,7 @@ function openPres() {
   document.getElementById('pres-mode').classList.add('active');
 }
 function closePres(){document.getElementById('pres-mode').classList.remove('active');}
-document.addEventListener('keydown',e=>{if(e.key==='Escape'){closePres();closeModal();}});
+document.addEventListener('keydown',e=>{if(e.key==='Escape'){closePres();closeRoadmap();closeModal();}});
 
 function renderModalDims(){
   const c=document.getElementById('modal-dims');if(!c)return;
@@ -936,6 +1014,179 @@ function openInJira(key) {
     'https://thedaybreak.atlassian.net/secure/CreateIssueDetails!init.jspa?issuetype=10000&summary='+summary+'&description='+desc,
     '_blank'
   );
+}
+
+// ── ROADMAP ──────────────────────────────────────────────────────────────────
+const PHASE_COLORS = {
+  'Ready for Release':    '#27500a',
+  'Testing':              '#0c447c',
+  'Development':          '#633806',
+  'Product Scoping':      '#3b6d11',
+  'Requirements Ready, Not Started': '#185fa5',
+  'Requirements Not Ready':'#854f0b',
+  'Blocked by Stakeholder':'#791f1f',
+};
+const PHASE_BG = {
+  'Ready for Release':    '#eaf3de',
+  'Testing':              '#e6f1fb',
+  'Development':          '#faeeda',
+  'Product Scoping':      '#eaf3de',
+  'Requirements Ready, Not Started': '#e6f1fb',
+  'Requirements Not Ready':'#faeeda',
+  'Blocked by Stakeholder':'#fcebeb',
+};
+
+function getWeekNumber(date) {
+  const d = new Date(date);
+  d.setHours(0,0,0,0);
+  d.setDate(d.getDate()+4-(d.getDay()||7));
+  const yearStart = new Date(d.getFullYear(),0,1);
+  return Math.ceil((((d-yearStart)/86400000)+1)/7);
+}
+
+function weekToDate(year, week) {
+  const jan1 = new Date(year, 0, 1);
+  const dayOfWeek = jan1.getDay() || 7;
+  const startOfWeek1 = new Date(jan1);
+  startOfWeek1.setDate(jan1.getDate() + (dayOfWeek <= 4 ? 1 - dayOfWeek : 8 - dayOfWeek));
+  const result = new Date(startOfWeek1);
+  result.setDate(startOfWeek1.getDate() + (week - 1) * 7);
+  return result;
+}
+
+function parseStartWeek(item) {
+  if(!item.start_week) return null;
+  const [yr, wk] = item.start_week.split('-W').map(Number);
+  return {year: yr, week: wk};
+}
+
+function openRoadmap() {
+  renderRoadmap();
+  document.getElementById('roadmap-mode').classList.add('active');
+}
+function closeRoadmap() {
+  document.getElementById('roadmap-mode').classList.remove('active');
+}
+
+function renderRoadmap() {
+  const filterVal = document.getElementById('rm-filter').value;
+  const groupVal = document.getElementById('rm-group').value;
+
+  let list = items.filter(i => {
+    if(filterVal === 'scheduled') return i.start_week;
+    if(filterVal === 'flagged') return flagged.has(i.key);
+    return true;
+  });
+
+  const scheduled = list.filter(i=>i.start_week);
+  const unscheduled = list.filter(i=>!i.start_week);
+
+  // Build 52 weeks of 2026
+  const YEAR = 2026;
+  const weeks = Array.from({length:52},(_,i)=>i+1);
+  const today = new Date();
+  const todayWeek = today.getFullYear()===YEAR ? getWeekNumber(today) : null;
+
+  // Month headers
+  const monthNames = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+  const weekMonths = weeks.map(w => {
+    const d = weekToDate(YEAR, w);
+    return d.getMonth();
+  });
+
+  // Group items
+  let groups = [];
+  if(groupVal === 'none') {
+    groups = [{label: null, items: scheduled}];
+  } else if(groupVal === 'phase') {
+    const phaseOrder = ['Ready for Release','Testing','Development','Product Scoping','Requirements Ready, Not Started','Requirements Not Ready','Blocked by Stakeholder'];
+    phaseOrder.forEach(ph => {
+      const g = scheduled.filter(i=>i.phase===ph);
+      if(g.length) groups.push({label:ph, items:g});
+    });
+    const other = scheduled.filter(i=>!phaseOrder.includes(i.phase));
+    if(other.length) groups.push({label:'Other', items:other});
+  } else {
+    const reqs = [...new Set(scheduled.map(i=>i.requestor))].sort();
+    reqs.forEach(r => groups.push({label:r, items:scheduled.filter(i=>i.requestor===r)}));
+  }
+
+  // Legend
+  const usedPhases = [...new Set(scheduled.map(i=>i.phase))];
+  document.getElementById('rm-legend').innerHTML = usedPhases.map(ph=>`
+    <div class="rm-legend-item">
+      <div class="rm-legend-dot" style="background:${PHASE_BG[ph]||'#e2e2e2'};border:1px solid ${PHASE_COLORS[ph]||'#999'}"></div>
+      <span style="font-size:12px;color:var(--text2)">${ph}</span>
+    </div>`).join('');
+
+  // Build month spans for header
+  let monthSpans = [];
+  let curMonth = weekMonths[0], spanStart = 0;
+  for(let i=1;i<=52;i++){
+    if(i===52||weekMonths[i]!==curMonth){
+      monthSpans.push({month:curMonth,start:spanStart,count:i-spanStart});
+      if(i<52){curMonth=weekMonths[i];spanStart=i;}
+    }
+  }
+
+  let html = '<table class="rm-table"><thead><tr>';
+  html += '<th style="text-align:left;padding-left:10px;min-width:180px">Initiative</th>';
+  monthSpans.forEach(ms => {
+    html += `<th class="month-hdr" colspan="${ms.count}" style="border-left:1px solid var(--border2)">${monthNames[ms.month]}</th>`;
+  });
+  html += '</tr><tr><th></th>';
+  weeks.forEach(w => {
+    const isMonthDiv = w>1 && weekMonths[w-1] !== weekMonths[w-2];
+    html += `<th class="${isMonthDiv?'rm-month-div':''} ${todayWeek===w?'rm-today':''}" style="font-size:10px">${w%4===0?w:''}</th>`;
+  });
+  html += '</tr></thead><tbody>';
+
+  groups.forEach(group => {
+    if(group.label) {
+      html += `<tr><td colspan="53" style="font-size:11px;font-weight:500;color:var(--text2);padding:10px 10px 4px;background:var(--bg2);letter-spacing:.04em;text-transform:uppercase">${group.label}</td></tr>`;
+    }
+    group.items.forEach(item => {
+      const sw = parseStartWeek(item);
+      if(!sw) return;
+      const dur = item.duration_weeks || 2;
+      const startW = sw.year === YEAR ? sw.week : (sw.year < YEAR ? 1 : null);
+      if(!startW) return;
+      const endW = Math.min(startW + dur - 1, 52);
+      const color = PHASE_COLORS[item.phase] || '#888';
+      const bg = PHASE_BG[item.phase] || '#e2e2e2';
+
+      html += `<tr onclick="void(0)"><td class="label-cell" title="${item.title}"><span class="rm-key">${item.key}</span>${item.title.slice(0,35)}${item.title.length>35?'…':''}</td>`;
+      weeks.forEach(w => {
+        const isMonthDiv = w>1 && weekMonths[w-1] !== weekMonths[w-2];
+        const inRange = w>=startW && w<=endW;
+        const isStart = w===startW;
+        const isEnd = w===endW;
+        const isSolo = startW===endW;
+        let barClass = '';
+        if(inRange){barClass = isSolo?'solo':isStart?'start':isEnd?'end-bar':'mid';}
+        html += `<td class="week-cell${isMonthDiv?' rm-month-div':''}${todayWeek===w?' rm-today':''}">`;
+        if(inRange){
+          html += `<div class="rm-bar ${barClass}" style="background:${bg};border:1px solid ${color}" onclick="toggleExpand('${item.key}')" title="${item.title} · W${startW}–W${endW} (${dur}w)"></div>`;
+        }
+        html += '</td>';
+      });
+      html += '</tr>';
+    });
+  });
+  html += '</tbody></table>';
+
+  document.getElementById('rm-grid').innerHTML = html;
+
+  // Unscheduled
+  if(unscheduled.length) {
+    document.getElementById('rm-unscheduled').innerHTML = `
+      <h3>Not yet scheduled (${unscheduled.length})</h3>
+      <div class="rm-unscheduled-grid">
+        ${unscheduled.map(i=>`<span class="rm-chip" onclick="closeRoadmap();toggleExpand('${i.key}')" title="Click to open">${i.key}: ${i.title.slice(0,30)}${i.title.length>30?'…':''}</span>`).join('')}
+      </div>`;
+  } else {
+    document.getElementById('rm-unscheduled').innerHTML = '';
+  }
 }
 
 const TEAM_PASSWORD = 'Daybreak963';
