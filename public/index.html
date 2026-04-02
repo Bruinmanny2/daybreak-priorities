@@ -579,20 +579,28 @@ function openModal(key) {
   const isEdit=!!key;
   document.getElementById('modal-title').textContent=isEdit?'Edit initiative':'Add new initiative';
   document.getElementById('modal-save-btn').textContent=isEdit?'Save changes':'Add initiative';
+  // Always render dim fields first so they exist before we try to set values
+  renderModalDims();
   if(isEdit){
     const item=items.find(i=>i.key===key);if(!item)return;
     document.getElementById('f-key').value=item.key;document.getElementById('f-key').disabled=true;
     document.getElementById('f-req').value=item.requestor;document.getElementById('f-title').value=item.title;
     document.getElementById('f-phase').value=item.phase;document.getElementById('f-rev').value=item.revenue||0;
     document.getElementById('f-notes').value=item.notes||'';
-    document.getElementById('f-effort').value=item.effort;document.getElementById('f-value').value=item.value;
-    document.getElementById('f-imp').value=item.importance;document.getElementById('f-urg').value=item.urgency;
+    // Set all dimension values from the item
+    scoringConfig.dims.forEach(d=>{
+      const el=document.getElementById('f-dim-'+d.id);
+      if(el) el.value=item[d.id]||3;
+    });
   } else {
     document.getElementById('f-key').value='';document.getElementById('f-key').disabled=false;
     document.getElementById('f-req').value='';document.getElementById('f-title').value='';
     document.getElementById('f-phase').value='Product Scoping';document.getElementById('f-rev').value='';
     document.getElementById('f-notes').value='';
-    ['f-effort','f-value','f-imp','f-urg'].forEach(id=>document.getElementById(id).value='3');
+    scoringConfig.dims.forEach(d=>{
+      const el=document.getElementById('f-dim-'+d.id);
+      if(el) el.value=3;
+    });
   }
   updateScorePreview();
   document.getElementById('overlay').classList.add('open');
