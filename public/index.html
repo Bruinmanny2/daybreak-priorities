@@ -354,7 +354,7 @@
 </div>
 
 <script>
-let supabase = null;
+let db = null;
 let items = [];
 let votes = {};
 let comments = {};
@@ -404,8 +404,8 @@ async function init(url,key,name) {
   const btn=document.getElementById('cfg-btn');
   try {
     if(!window.supabase){throw new Error('Supabase library not loaded — check your internet connection and reload.');}
-    supabase = window.supabase.createClient(url, key, {auth:{persistSession:false}});
-    const {data,error}=await supabase.from('initiatives').select('key').limit(1);
+    db = window.supabase.createClient(url, key, {auth:{persistSession:false}});
+    const {data,error}=await db.from('initiatives').select('key').limit(1);
     if(error){throw new Error(error.message||error.code||JSON.stringify(error));}
     document.getElementById('config-screen').style.display='none';
     document.getElementById('app').style.display='block';
@@ -422,9 +422,9 @@ async function init(url,key,name) {
 
 async function loadAll() {
   const [iRes,vRes,cRes]=await Promise.all([
-    supabase.from('initiatives').select('*').order('score',{ascending:false}),
-    supabase.from('votes').select('*'),
-    supabase.from('comments').select('*').order('created_at',{ascending:true})
+    db.from('initiatives').select('*').order('score',{ascending:false}),
+    db.from('votes').select('*'),
+    db.from('comments').select('*').order('created_at',{ascending:true})
   ]);
   items=iRes.data||[];
   votes={};
@@ -438,7 +438,7 @@ async function loadAll() {
 }
 
 function subscribeRealtime() {
-  supabase.channel('all').on('postgres_changes',{event:'*',schema:'public'},()=>loadAll()).subscribe();
+  db.channel('all').on('postgres_changes',{event:'*',schema:'public'},()=>loadAll()).subscribe();
 }
 
 function getFiltered() {
@@ -472,7 +472,7 @@ async function vote(key,dir,e) {
   const newVal=uv===dir?0:dir;
   const name=who();
   if(!name){alert('Enter your name above before voting.');return;}
-  await supabase.from('votes').upsert({initiative_key:key,user_name:name,value:newVal},{onConflict:'initiative_key,user_name'});
+  await db.from('votes').upsert({initiative_key:key,user_name:name,value:newVal},{onConflict:'initiative_key,user_name'});
   if(!votes[key])votes[key]={};votes[key][name]=newVal;
   render();
 }
@@ -481,7 +481,7 @@ async function addComment(key) {
   const inp=document.getElementById('ci-'+key);
   const t=inp.value.trim();if(!t)return;
   const name=who();if(!name){alert('Enter your name above first.');return;}
-  await supabase.from('comments').insert({initiative_key:key,author:name,text:t,parent_id:null});
+  await db.from('comments').insert({initiative_key:key,author:name,text:t,parent_id:null});
   inp.value='';
 }
 
@@ -489,7 +489,7 @@ async function addReply(key,cid) {
   const inp=document.getElementById('ri-'+key+'-'+cid);
   const t=inp.value.trim();if(!t)return;
   const name=who();if(!name){alert('Enter your name above first.');return;}
-  await supabase.from('comments').insert({initiative_key:key,author:name,text:t,parent_id:cid});
+  await db.from('comments').insert({initiative_key:key,author:name,text:t,parent_id:cid});
   inp.value='';
 }
 
@@ -540,10 +540,10 @@ async function saveInitiative() {
   const phase=document.getElementById('f-phase').value;
   const data={key,title,requestor,phase,effort,value,importance,urgency,score,revenue,notes,is_new:!editKey,updated_at:new Date().toISOString()};
   if(editKey){
-    await supabase.from('initiatives').update(data).eq('key',editKey);
+    await db.from('initiatives').update(data).eq('key',editKey);
   } else {
     const existing=items.find(i=>i.key===key);if(existing){alert('An initiative with this key already exists.');return;}
-    await supabase.from('initiatives').insert(data);
+    await db.from('initiatives').insert(data);
   }
   closeModal();
 }
@@ -551,7 +551,7 @@ async function saveInitiative() {
 async function deleteItem(key,e) {
   e.stopPropagation();
   if(!confirm('Remove "'+key+'" from the board? This cannot be undone.'))return;
-  await supabase.from('initiatives').delete().eq('key',key);
+  await db.from('initiatives').delete().eq('key',key);
   if(expanded===key)expanded=null;
 }
 
