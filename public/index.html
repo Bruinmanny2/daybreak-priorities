@@ -232,6 +232,34 @@
   .pres-exit:hover { background: var(--bg2); }
   .pres-phase-group { margin-bottom: 1.5rem; }
   .pres-phase-label { font-size: 12px; font-weight: 500; color: var(--text2); letter-spacing: .04em; margin-bottom: 8px; }
+
+  .settings-overlay{position:fixed;inset:0;background:rgba(0,0,0,0.4);display:none;align-items:flex-start;justify-content:flex-end;z-index:150;padding:1rem}
+  .settings-overlay.open{display:flex}
+  .settings-panel{background:var(--bg);border:0.5px solid var(--border3);border-radius:var(--radius-lg);padding:1.5rem;width:100%;max-width:480px;max-height:90vh;overflow-y:auto;margin-top:60px}
+  .settings-panel h3{font-size:16px;font-weight:500;margin-bottom:4px}
+  .settings-panel .sub{font-size:13px;color:var(--text2);margin-bottom:1.25rem}
+  .settings-section{margin-bottom:1.5rem}
+  .settings-section h4{font-size:12px;font-weight:500;color:var(--text2);text-transform:uppercase;letter-spacing:.05em;margin-bottom:10px;padding-bottom:6px;border-bottom:0.5px solid var(--border)}
+  .dim-row{display:flex;align-items:center;gap:8px;margin-bottom:8px}
+  .dim-row input[type=text]{flex:1;font-size:13px;padding:6px 9px;border:0.5px solid var(--border2);border-radius:var(--radius);background:var(--bg2);color:var(--text);font-family:var(--font)}
+  .dim-row input[type=number]{width:70px;font-size:13px;padding:6px 9px;border:0.5px solid var(--border2);border-radius:var(--radius);background:var(--bg2);color:var(--text);font-family:var(--font)}
+  .dim-row .pct-lbl{font-size:12px;color:var(--text2);width:16px;flex-shrink:0}
+  .dim-row button.rm{background:none;border:none;cursor:pointer;color:var(--red-text);font-size:18px;line-height:1;padding:0 4px;flex-shrink:0}
+  .weight-total{font-size:12px;color:var(--text2);margin-top:4px}
+  .weight-total.ok{color:var(--green-text)}
+  .weight-total.bad{color:var(--red-text)}
+  .vote-mult-row{display:flex;align-items:center;gap:10px;font-size:13px}
+  .vote-mult-row input{width:70px;font-size:13px;padding:6px 9px;border:0.5px solid var(--border2);border-radius:var(--radius);background:var(--bg2);color:var(--text);font-family:var(--font)}
+  .vote-mult-row span{color:var(--text2);font-size:12px}
+  .settings-btns{display:flex;gap:8px;justify-content:flex-end;margin-top:1rem}
+  .save-msg{font-size:12px;color:var(--green-text);margin-top:8px;display:none;text-align:right}
+  .voters{margin-top:8px;margin-bottom:12px;display:flex;gap:16px;flex-wrap:wrap}
+  .voter-group{display:flex;flex-direction:column;gap:5px}
+  .voter-group-lbl{font-size:11px;color:var(--text3);font-weight:500}
+  .voter-chips{display:flex;gap:4px;flex-wrap:wrap}
+  .voter-chip{font-size:11px;padding:2px 8px;border-radius:999px;white-space:nowrap}
+  .voter-chip.up{background:var(--green-bg);color:var(--green-text)}
+  .voter-chip.dn{background:var(--red-bg);color:var(--red-text)}
 </style>
 </head>
 <body>
@@ -261,6 +289,7 @@
       <div class="hdr-right">
         <button class="btn btn-pres" onclick="openPres()">Presentation mode</button>
         <button class="btn btn-primary" onclick="openModal()">+ Add initiative</button>
+        <button class="btn" onclick="openSettings()">Settings</button>
         <button class="btn" onclick="resetConfig()" style="font-size:12px;color:var(--text3)">Switch account</button>
       </div>
     </div>
@@ -300,6 +329,31 @@
 </div>
 
 <!-- ADD / EDIT MODAL -->
+<div class="settings-overlay" id="settings-overlay">
+  <div class="settings-panel">
+    <h3>Scoring settings</h3>
+    <p class="sub">Changes sync to your whole team instantly.</p>
+    <div class="settings-section">
+      <h4>Dimensions &amp; weights</h4>
+      <div id="dim-list"></div>
+      <div class="weight-total" id="weight-total"></div>
+      <button class="btn" style="margin-top:10px;font-size:12px" onclick="addDimension()">+ Add dimension</button>
+    </div>
+    <div class="settings-section">
+      <h4>Vote influence</h4>
+      <div class="vote-mult-row">
+        <input type="number" id="vote-mult-input" min="0" max="100" step="1" value="8" />
+        <span>score points added per net vote</span>
+      </div>
+    </div>
+    <div class="settings-btns">
+      <button class="btn" onclick="closeSettings()">Cancel</button>
+      <button class="btn btn-primary" onclick="saveSettings()">Save &amp; apply</button>
+    </div>
+    <div class="save-msg" id="save-msg">Settings saved.</div>
+  </div>
+</div>
+
 <div class="overlay" id="overlay">
   <div class="modal">
     <h3 id="modal-title">Add new initiative</h3>
@@ -317,12 +371,7 @@
       <div class="fg"><label>Revenue impact ($/mo)</label><input id="f-rev" type="number" placeholder="0" /></div>
       <div class="fg full"><label>Notes / context</label><textarea id="f-notes" placeholder="Value, cost savings, or any other context..."></textarea></div>
     </div>
-    <div class="score-row">
-      <div class="si2"><label>Effort & cost (20%)</label><select id="f-effort"><option>1</option><option>2</option><option>3</option><option>4</option><option>5</option></select></div>
-      <div class="si2"><label>Value $ (28%)</label><select id="f-value"><option>1</option><option>2</option><option>3</option><option>4</option><option>5</option></select></div>
-      <div class="si2"><label>Importance (25%)</label><select id="f-imp"><option>1</option><option>2</option><option>3</option><option>4</option><option>5</option></select></div>
-      <div class="si2"><label>Urgency (27%)</label><select id="f-urg"><option>1</option><option>2</option><option>3</option><option>4</option><option>5</option></select></div>
-    </div>
+    <div class="score-row" id="modal-dims"></div>
     <div class="score-preview">Calculated score: <span id="score-prev">—</span></div>
     <div class="modal-btns">
       <button class="btn" onclick="closeModal()">Cancel</button>
@@ -361,6 +410,36 @@ let comments = {};
 let expanded = null;
 let editKey = null;
 
+const DEFAULT_DIMS=[
+  {id:'effort',label:'Effort & cost',weight:20},
+  {id:'value',label:'Value ($)',weight:28},
+  {id:'importance',label:'Importance',weight:25},
+  {id:'urgency',label:'Urgency',weight:27},
+];
+let scoringConfig={dims:DEFAULT_DIMS.map(d=>({...d})),voteMult:8};
+
+async function loadScoringConfig(){
+  try{
+    const {data,error}=await db.from('scoring_config').select('config').eq('id',1).single();
+    if(data&&data.config){
+      const parsed=JSON.parse(data.config);
+      if(parsed.dims&&parsed.dims.length) scoringConfig=parsed;
+    }
+  }catch(e){/* use defaults */}
+}
+
+async function saveScoringConfig(){
+  try{
+    await db.from('scoring_config').upsert({id:1,config:JSON.stringify(scoringConfig)},{onConflict:'id'});
+  }catch(e){console.warn('scoring_config table not found — run: CREATE TABLE scoring_config (id int primary key, config text);');}
+}
+
+function calcScoreFromConfig(item){
+  return Math.round(scoringConfig.dims.reduce((sum,d)=>{
+    return sum+(((item[d.id]||0)/5)*d.weight);
+  },0)*10)/10;
+}
+
 function phColor(p) {
   if(p.includes('Release')) return 'green';
   if(p.includes('Testing')) return 'blue';
@@ -371,10 +450,10 @@ function phColor(p) {
 function initials(n) { return n.split(' ').map(x=>x[0]).join('').toUpperCase().slice(0,2); }
 function fmtRev(r) { return r ? '$'+r.toLocaleString()+'/mo' : '—'; }
 function who() { return (document.getElementById('who-input')||{}).value?.trim() || 'Anonymous'; }
-function calcScore(e,v,i,u) { return Math.round(((e/5)*20+(v/5)*28+(i/5)*25+(u/5)*27)*10)/10; }
+function calcScore(e,v,i,u){return Math.round(((e/5)*20+(v/5)*28+(i/5)*25+(u/5)*27)*10)/10;}
 function netVote(key) { const v=votes[key]||{}; return Object.values(v).reduce((s,x)=>s+x,0); }
 function userVote(key) { const v=votes[key]||{}; return v[who()]||0; }
-function combined(key) { const item=items.find(i=>i.key===key); if(!item)return 0; return item.score+(netVote(key)*8); }
+function combined(key){const item=items.find(i=>i.key===key);if(!item)return 0;return item.score+(netVote(key)*(scoringConfig.voteMult||8));}
 function timeAgo(ts) {
   const d=Date.now()-new Date(ts).getTime();
   if(d<60000)return'just now'; if(d<3600000)return Math.floor(d/60000)+'m ago';
@@ -619,13 +698,9 @@ function render() {
         <button class="exp-btn">${isExp?'Collapse ▲':'Details ▼'}</button>
       </div>
       ${isExp?`<div class="detail">
-        <div class="sg">
-          <div class="si"><div class="si-lbl">Effort & cost (20%)</div><div class="si-val">${item.effort}/5</div></div>
-          <div class="si"><div class="si-lbl">Value $ (28%)</div><div class="si-val">${item.value}/5</div></div>
-          <div class="si"><div class="si-lbl">Importance (25%)</div><div class="si-val">${item.importance}/5</div></div>
-          <div class="si"><div class="si-lbl">Urgency (27%)</div><div class="si-val">${item.urgency}/5</div></div>
-        </div>
+        <div class="sg">${scoringConfig.dims.map(d=>`<div class='si'><div class='si-lbl'>${d.label} (${d.weight}%)</div><div class='si-val'>${item[d.id]!==undefined?item[d.id]+'/5':'—'}</div></div>`).join('')}</div>
         ${item.notes?`<div class="notes-box">${item.notes}</div>`:''}
+        ${(()=>{const vobj=votes[item.key]||{};const up=Object.entries(vobj).filter(([,v])=>v===1).map(([n])=>n);const dn=Object.entries(vobj).filter(([,v])=>v===-1).map(([n])=>n);if(!up.length&&!dn.length)return '<p style="font-size:12px;color:var(--text3);margin-bottom:12px">No votes yet.</p>';return '<div class="voters">'+(up.length?`<div class="voter-group"><div class="voter-group-lbl">▲ Upvoted by</div><div class="voter-chips">${up.map(n=>`<span class="voter-chip up">${n}</span>`).join('')}</div></div>`:'')+( dn.length?`<div class="voter-group"><div class="voter-group-lbl">▼ Downvoted by</div><div class="voter-chips">${dn.map(n=>`<span class="voter-chip dn">${n}</span>`).join('')}</div></div>`:'')+' </div>';})()}
         <div class="detail-actions">
           <button onclick="openModal('${item.key}')">Edit</button>
           <button class="del" onclick="deleteItem('${item.key}',event)">Remove</button>
@@ -699,6 +774,41 @@ function openPres() {
 }
 function closePres(){document.getElementById('pres-mode').classList.remove('active');}
 document.addEventListener('keydown',e=>{if(e.key==='Escape'){closePres();closeModal();}});
+
+function renderModalDims(){
+  const c=document.getElementById('modal-dims');if(!c)return;
+  c.innerHTML=scoringConfig.dims.map(d=>`<div class="si2"><label>${d.label} (${d.weight}%)</label><select id="f-dim-${d.id}" onchange="updateScorePreview()"><option>1</option><option>2</option><option>3</option><option>4</option><option>5</option></select></div>`).join('');
+}
+function openSettings(){
+  renderSettingsDims();
+  document.getElementById('vote-mult-input').value=scoringConfig.voteMult||8;
+  document.getElementById('settings-overlay').classList.add('open');
+}
+function closeSettings(){document.getElementById('settings-overlay').classList.remove('open');}
+function renderSettingsDims(){
+  document.getElementById('dim-list').innerHTML=scoringConfig.dims.map((d,i)=>`<div class="dim-row"><input type="text" value="${d.label}" oninput="scoringConfig.dims[${i}].label=this.value;updateWeightTotal()" /><input type="number" min="0" max="100" value="${d.weight}" oninput="scoringConfig.dims[${i}].weight=+this.value;updateWeightTotal()" /><span class="pct-lbl">%</span><button class="rm" onclick="scoringConfig.dims.splice(${i},1);renderSettingsDims()">×</button></div>`).join('');
+  updateWeightTotal();
+}
+function addDimension(){
+  scoringConfig.dims.push({id:'dim_'+Date.now(),label:'New dimension',weight:0});
+  renderSettingsDims();
+}
+function updateWeightTotal(){
+  const t=scoringConfig.dims.reduce((s,d)=>s+(+d.weight||0),0);
+  const el=document.getElementById('weight-total');
+  if(el){el.textContent='Total: '+t+'%'+(t===100?' ✓':' — must equal 100%');el.className='weight-total '+(t===100?'ok':'bad');}
+}
+async function saveSettings(){
+  const t=scoringConfig.dims.reduce((s,d)=>s+(+d.weight||0),0);
+  if(t!==100){alert('Weights must add up to 100%. Current total: '+t+'%');return;}
+  scoringConfig.voteMult=+(document.getElementById('vote-mult-input').value)||8;
+  await saveScoringConfig();
+  const msg=document.getElementById('save-msg');
+  msg.style.display='block';
+  setTimeout(()=>{msg.style.display='none';},2500);
+  closeSettings();
+  render();
+}
 
 const savedUrl='https://wwjdypjpkawvnknevdgd.supabase.co';
 const savedKey='eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Ind3amR5cGpwa2F3dm5rbmV2ZGdkIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzUwNzgwMTcsImV4cCI6MjA5MDY1NDAxN30.g-wxdMWQvAsuk1UFr_Zub_UHEzBVCOH7bnKaj3KMBWY';
