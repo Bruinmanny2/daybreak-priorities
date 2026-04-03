@@ -360,6 +360,16 @@
   .cl-empty{text-align:center;padding:4rem;color:var(--text3);font-size:14px}
   .cl-load-more{width:100%;margin-top:1rem;padding:10px;border:0.5px solid var(--border2);border-radius:var(--radius);background:var(--bg);color:var(--text2);cursor:pointer;font-size:13px;font-family:var(--font)}
   .cl-load-more:hover{background:var(--bg2)}
+
+  .tag-selector{display:flex;flex-wrap:wrap;gap:6px;margin-top:4px}
+  .tag-option{font-size:12px;padding:4px 10px;border-radius:999px;cursor:pointer;border:1.5px solid transparent;transition:all .1s;user-select:none}
+  .tag-option:hover{opacity:.85}
+  .tag-option.selected{font-weight:500}
+  .initiative-tag{font-size:11px;padding:2px 8px;border-radius:999px;white-space:nowrap;border:1px solid}
+  .tags-row{display:flex;gap:4px;flex-wrap:wrap;margin-top:4px}
+  .tag-filter-chip{font-size:12px;padding:3px 10px;border-radius:999px;cursor:pointer;border:1.5px solid;transition:all .1s}
+  .tag-filter-chip.active{font-weight:500}
+  .tag-filter-chip:hover{opacity:.8}
 </style>
 </head>
 <body>
@@ -412,6 +422,7 @@
       <span style="color:var(--text3);font-size:12px">— visible to your whole team</span>
     </div>
 
+    <div id="tag-filter-bar" style="display:flex;flex-wrap:wrap;gap:6px;margin-bottom:.75rem"></div>
     <div class="ctrl-row">
       <input type="text" id="search" placeholder="Search initiatives..." oninput="render()" />
       <select id="phase-f" onchange="render()">
@@ -483,6 +494,7 @@
         </select>
       </div>
       <div class="fg"><label>Revenue impact ($/mo)</label><input id="f-rev" type="number" placeholder="0" /></div>
+      <div class="fg full"><label>Tags — select all that apply</label><div id="modal-tags-container"></div></div>
       <div class="fg full"><label>Notes / context</label><textarea id="f-notes" placeholder="Value, cost savings, or any other context..."></textarea></div>
       <div class="fg"><label>Start week (2026)</label><input id="f-start-week" type="week" min="2026-W01" max="2026-W52" /></div>
       <div class="fg"><label>Duration (weeks)</label><input id="f-duration" type="number" min="1" max="52" placeholder="e.g. 4" /></div>
@@ -591,6 +603,79 @@ let votes = {};
 let comments = {};
 let expanded = null;
 let editKey = null;
+
+const ALL_TAGS = [
+  {label:"Revenue driving",     color:"#27500a", bg:"#eaf3de", border:"#97c459"},
+  {label:"Cost reduction",      color:"#0c447c", bg:"#e6f1fb", border:"#85b7eb"},
+  {label:"Risk mitigation",     color:"#791f1f", bg:"#fcebeb", border:"#f09595"},
+  {label:"Customer experience", color:"#633806", bg:"#faeeda", border:"#ef9f27"},
+  {label:"Operational efficiency",color:"#3b6d11",bg:"#eaf3de",border:"#c0dd97"},
+  {label:"Compliance",          color:"#534AB7", bg:"#EEEDFE", border:"#AFA9EC"},
+  {label:"Growth",              color:"#0F6E56", bg:"#E1F5EE", border:"#5DCAA5"},
+  {label:"Tech debt",           color:"#5F5E5A", bg:"#F1EFE8", border:"#B4B2A9"},
+  {label:"Partner enablement",  color:"#185FA5", bg:"#e6f1fb", border:"#378ADD"},
+  {label:"Quick win",           color:"#854F0B", bg:"#faeeda", border:"#EF9F27"},
+];
+
+let activeTagFilters = new Set();
+
+function getTagMeta(label){ return ALL_TAGS.find(t=>t.label===label)||{color:'#888',bg:'#eee',border:'#ccc'}; }
+
+function renderTagSelector(selectedTags){
+  return `<div class="tag-selector" id="modal-tags">
+    ${ALL_TAGS.map(t=>{
+      const sel=selectedTags.includes(t.label);
+      return `<span class="tag-option${sel?' selected':''}"
+        style="background:${sel?t.bg:'transparent'};color:${sel?t.color:'var(--text2)'};border-color:${sel?t.border:'var(--border2)'}"
+        onclick="toggleModalTag('${t.label}')">${t.label}</span>`;
+    }).join('')}
+  </div>`;
+}
+
+function toggleModalTag(label){
+  const container=document.getElementById('modal-tags');
+  const chips=container.querySelectorAll('.tag-option');
+  chips.forEach(chip=>{
+    if(chip.textContent===label){
+      const t=getTagMeta(label);
+      const isSelected=chip.classList.contains('selected');
+      chip.classList.toggle('selected');
+      if(isSelected){
+        chip.style.background='transparent';
+        chip.style.color='var(--text2)';
+        chip.style.borderColor='var(--border2)';
+      } else {
+        chip.style.background=t.bg;
+        chip.style.color=t.color;
+        chip.style.borderColor=t.border;
+      }
+    }
+  });
+}
+
+function getModalTags(){
+  const container=document.getElementById('modal-tags');
+  if(!container) return [];
+  return [...container.querySelectorAll('.tag-option.selected')].map(c=>c.textContent.trim());
+}
+
+function renderTagFilterBar(){
+  const bar=document.getElementById('tag-filter-bar');
+  if(!bar) return;
+  bar.innerHTML=ALL_TAGS.map(t=>{
+    const active=activeTagFilters.has(t.label);
+    return `<span class="tag-filter-chip${active?' active':''}"
+      style="background:${active?t.bg:'transparent'};color:${active?t.color:'var(--text2)'};border-color:${active?t.border:'var(--border2)'}"
+      onclick="toggleTagFilter('${t.label}')">${t.label}</span>`;
+  }).join('');
+}
+
+function toggleTagFilter(label){
+  if(activeTagFilters.has(label)) activeTagFilters.delete(label);
+  else activeTagFilters.add(label);
+  renderTagFilterBar();
+  render();
+}
 
 const DEFAULT_DIMS=[
   {id:'effort',label:'Effort & cost',weight:20},
@@ -712,7 +797,8 @@ function getFiltered() {
   let list=items.filter(i=>{
     const ms=!s||i.title.toLowerCase().includes(s)||i.key.toLowerCase().includes(s)||i.requestor.toLowerCase().includes(s);
     const mf=ph==='__flagged__'?flagged.has(i.key):(!ph||i.phase===ph);
-    return ms&&mf&&(!rq||i.requestor===rq);
+    const mt=activeTagFilters.size===0||((()=>{const t=i.tags?JSON.parse(i.tags||'[]'):[];return [...activeTagFilters].every(f=>t.includes(f));})());
+    return ms&&mf&&mt&&(!rq||i.requestor===rq);
   });
   list.sort((a,b)=>{
     if(so==='score')return b.score-a.score;
@@ -769,6 +855,12 @@ function openModal(key) {
   document.getElementById('modal-save-btn').textContent=isEdit?'Save changes':'Add initiative';
   // Step 1: render the dimension fields into the DOM
   renderModalDims();
+  // Render tag selector
+  const container=document.getElementById('modal-tags-container');
+  if(container){
+    const existingTags=isEdit?(items.find(i=>i.key===key)||{}).tags||[]:[];
+    container.innerHTML=renderTagSelector(Array.isArray(existingTags)?existingTags:JSON.parse(existingTags||'[]'));
+  }
   // Step 2: populate fields
   if(isEdit){
     const item=items.find(i=>i.key===key);if(!item)return;
@@ -840,7 +932,8 @@ async function saveInitiative() {
   const phase=document.getElementById('f-phase').value;
   const swEl=document.getElementById('f-start-week');const startWeek=swEl&&swEl.value?swEl.value:null;
   const durEl=document.getElementById('f-duration');const durationWeeks=durEl&&durEl.value?parseInt(durEl.value)||null:null;
-  const data={key,title,requestor,phase,effort,value,importance,urgency,score,revenue,notes,start_week:startWeek,duration_weeks:durationWeeks,is_new:!editKey,updated_at:new Date().toISOString()};
+  const tags=JSON.stringify(getModalTags());
+  const data={key,title,requestor,phase,effort,value,importance,urgency,score,revenue,notes,tags,start_week:startWeek,duration_weeks:durationWeeks,is_new:!editKey,updated_at:new Date().toISOString()};
   if(editKey){
     await db.from('initiatives').update(data).eq('key',editKey);
     logActivity('initiative_updated',key,title);
