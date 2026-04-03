@@ -323,6 +323,43 @@
   .date-row label{font-size:12px;color:var(--text2);min-width:120px}
   .date-row input[type=week],.date-row input[type=number]{font-size:13px;padding:6px 10px;border:0.5px solid var(--border2);border-radius:var(--radius);background:var(--bg2);color:var(--text);font-family:var(--font)}
   .date-row input[type=number]{width:80px}
+
+  /* CHANGELOG */
+  #changelog-mode{display:none;position:fixed;inset:0;background:var(--bg);z-index:200;overflow-y:auto}
+  #changelog-mode.active{display:block}
+  .cl-wrap{max-width:960px;margin:0 auto;padding:2rem 1.5rem 4rem}
+  .cl-hdr{display:flex;align-items:flex-start;justify-content:space-between;margin-bottom:1.5rem;padding-bottom:1rem;border-bottom:0.5px solid var(--border2);gap:12px;flex-wrap:wrap}
+  .cl-hdr h1{font-size:22px;font-weight:500}
+  .cl-hdr .sub{font-size:13px;color:var(--text2);margin-top:3px}
+  .cl-exit{font-size:13px;padding:7px 14px;border:0.5px solid var(--border2);border-radius:var(--radius);background:var(--bg);color:var(--text);cursor:pointer;font-family:var(--font)}
+  .cl-exit:hover{background:var(--bg2)}
+  .cl-filters{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:1.25rem;align-items:center}
+  .cl-filters select,.cl-filters input{font-size:13px;padding:7px 10px;border:0.5px solid var(--border2);border-radius:var(--radius);background:var(--bg);color:var(--text);font-family:var(--font)}
+  .cl-filters input[type=text]{width:200px}
+  .cl-filters input[type=date]{width:150px}
+  .cl-stats{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:10px;margin-bottom:1.5rem}
+  .cl-stat{background:var(--bg2);border-radius:var(--radius);padding:.75rem 1rem}
+  .cl-stat-lbl{font-size:12px;color:var(--text2);margin-bottom:4px}
+  .cl-stat-val{font-size:22px;font-weight:500}
+  .cl-timeline{display:flex;flex-direction:column;gap:0}
+  .cl-day-group{margin-bottom:1.5rem}
+  .cl-day-label{font-size:12px;font-weight:500;color:var(--text2);text-transform:uppercase;letter-spacing:.05em;margin-bottom:8px;padding-bottom:6px;border-bottom:0.5px solid var(--border);display:flex;align-items:center;gap:8px}
+  .cl-day-count{background:var(--bg2);border-radius:999px;font-size:11px;padding:1px 8px;color:var(--text3);font-weight:400;text-transform:none;letter-spacing:0}
+  .cl-entry{display:flex;gap:12px;padding:10px 0;border-bottom:0.5px solid var(--border);align-items:flex-start}
+  .cl-entry:last-child{border-bottom:none}
+  .cl-icon{width:32px;height:32px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:13px;flex-shrink:0;margin-top:1px}
+  .cl-body{flex:1;min-width:0}
+  .cl-top{display:flex;align-items:flex-start;justify-content:space-between;gap:8px;flex-wrap:wrap}
+  .cl-action{font-size:14px;color:var(--text);line-height:1.5}
+  .cl-action strong{font-weight:500}
+  .cl-time{font-size:12px;color:var(--text3);white-space:nowrap;flex-shrink:0}
+  .cl-detail{font-size:12px;color:var(--text2);margin-top:3px;line-height:1.5}
+  .cl-key{font-size:11px;color:var(--blue-text);font-family:monospace;background:var(--blue-bg);padding:1px 6px;border-radius:4px;cursor:pointer}
+  .cl-key:hover{opacity:.8}
+  .cl-type-badge{font-size:11px;padding:2px 8px;border-radius:999px;white-space:nowrap}
+  .cl-empty{text-align:center;padding:4rem;color:var(--text3);font-size:14px}
+  .cl-load-more{width:100%;margin-top:1rem;padding:10px;border:0.5px solid var(--border2);border-radius:var(--radius);background:var(--bg);color:var(--text2);cursor:pointer;font-size:13px;font-family:var(--font)}
+  .cl-load-more:hover{background:var(--bg2)}
 </style>
 </head>
 <body>
@@ -363,6 +400,7 @@
         <button class="btn btn-pres" onclick="openPres()">Presentation mode</button>
         <button class="btn" onclick="openRoadmap()" style="background:var(--green-bg);color:var(--green-text);border-color:var(--green-border)">2026 Roadmap</button>
         <button class="btn btn-primary" onclick="openModal()">+ Add initiative</button>
+        <button class="btn" onclick="openChangelog()">Changelog</button>
         <button class="btn" onclick="openSettings()">Settings</button>
         <button class="btn" onclick="resetConfig()" style="font-size:12px;color:var(--text3)">Switch account</button>
       </div>
@@ -477,6 +515,45 @@
       <h2>Full ranked list</h2>
       <div class="pres-full-list" id="pres-full"></div>
     </div>
+  </div>
+</div>
+
+<div id="changelog-mode">
+  <div class="cl-wrap">
+    <div class="cl-hdr">
+      <div>
+        <h1>Changelog</h1>
+        <div class="sub">Full history of all changes — votes, edits, comments, new initiatives</div>
+      </div>
+      <button class="cl-exit" onclick="closeChangelog()">Close</button>
+    </div>
+    <div class="cl-stats" id="cl-stats"></div>
+    <div class="cl-filters">
+      <input type="text" id="cl-search" placeholder="Search by user or initiative..." oninput="renderChangelog()" />
+      <select id="cl-type" onchange="renderChangelog()">
+        <option value="">All types</option>
+        <option value="vote">Votes</option>
+        <option value="comment">Comments</option>
+        <option value="initiative_created">New initiatives</option>
+        <option value="initiative_updated">Edits</option>
+        <option value="flag">Flags</option>
+        <option value="login">Logins</option>
+      </select>
+      <select id="cl-user" onchange="renderChangelog()">
+        <option value="">All users</option>
+      </select>
+      <input type="date" id="cl-from" onchange="renderChangelog()" title="From date" />
+      <input type="date" id="cl-to" onchange="renderChangelog()" title="To date" />
+      <select id="cl-period" onchange="applyPeriod()">
+        <option value="">Custom range</option>
+        <option value="today">Today</option>
+        <option value="week">This week</option>
+        <option value="month">This month</option>
+        <option value="all">All time</option>
+      </select>
+      <button class="btn" onclick="clearClFilters()" style="font-size:12px">Clear</button>
+    </div>
+    <div id="cl-timeline"></div>
   </div>
 </div>
 
@@ -596,6 +673,8 @@ async function init(url,key,name) {
     document.getElementById('who-input').value=name;
     await loadAll();
     subscribeRealtime();
+    // Log login
+    setTimeout(()=>logActivity('login', null, null), 1000);
   } catch(e) {
     if(btn){btn.textContent='Connect and open board';btn.disabled=false;}
     err.style.display='block';
@@ -659,22 +738,25 @@ async function vote(key,dir,e) {
   if(!name){alert('Enter your name above before voting.');return;}
   await db.from('votes').upsert({initiative_key:key,user_name:name,value:newVal},{onConflict:'initiative_key,user_name'});
   if(!votes[key])votes[key]={};votes[key][name]=newVal;
+  logActivity(newVal===0?'vote_removed':newVal===1?'vote':'vote_down',key,null);
   render();
 }
 
-async function addComment(key) {
+async function addComment(key){
   const inp=document.getElementById('ci-'+key);
   const t=inp.value.trim();if(!t)return;
   const name=who();if(!name){alert('Enter your name above first.');return;}
   await db.from('comments').insert({initiative_key:key,author:name,text:t,parent_id:null});
+  logActivity('comment',key,t.slice(0,100));
   inp.value='';
 }
 
-async function addReply(key,cid) {
+async function addReply(key,cid){
   const inp=document.getElementById('ri-'+key+'-'+cid);
   const t=inp.value.trim();if(!t)return;
   const name=who();if(!name){alert('Enter your name above first.');return;}
   await db.from('comments').insert({initiative_key:key,author:name,text:t,parent_id:cid});
+  logActivity('reply',key,t.slice(0,100));
   inp.value='';
 }
 
@@ -761,9 +843,11 @@ async function saveInitiative() {
   const data={key,title,requestor,phase,effort,value,importance,urgency,score,revenue,notes,start_week:startWeek,duration_weeks:durationWeeks,is_new:!editKey,updated_at:new Date().toISOString()};
   if(editKey){
     await db.from('initiatives').update(data).eq('key',editKey);
+    logActivity('initiative_updated',key,title);
   } else {
     const existing=items.find(i=>i.key===key);if(existing){alert('An initiative with this key already exists.');return;}
     await db.from('initiatives').insert(data);
+    logActivity('initiative_created',key,title);
   }
   closeModal();
   // Offer to open in Jira for new initiatives without a real key
@@ -939,7 +1023,7 @@ function openPres() {
   document.getElementById('pres-mode').classList.add('active');
 }
 function closePres(){document.getElementById('pres-mode').classList.remove('active');}
-document.addEventListener('keydown',e=>{if(e.key==='Escape'){closePres();closeRoadmap();closeModal();}});
+document.addEventListener('keydown',e=>{if(e.key==='Escape'){closePres();closeRoadmap();closeChangelog();closeModal();}});
 
 function renderModalDims(){
   const c=document.getElementById('modal-dims');if(!c)return;
@@ -991,9 +1075,11 @@ async function toggleFlag(key, e) {
   if(isFlagged) {
     flagged.delete(key);
     try { await db.from('sync_flags').delete().eq('initiative_key',key); } catch(e){}
+    logActivity('unflag',key,null);
   } else {
     flagged.add(key);
     try { await db.from('sync_flags').insert({initiative_key:key,flagged_by:who(),flagged_at:new Date().toISOString()}); } catch(e){}
+    logActivity('flag',key,null);
   }
   render();
 }
@@ -1020,6 +1106,225 @@ function openInJira(key) {
     'https://thedaybreak.atlassian.net/secure/CreateIssueDetails!init.jspa?issuetype=10000&summary='+summary+'&description='+desc,
     '_blank'
   );
+}
+
+// ── CHANGELOG ────────────────────────────────────────────────────────────────
+let clLog = [];
+let clPage = 0;
+const CL_PAGE_SIZE = 50;
+
+const CL_TYPE_META = {
+  vote:                {label:'Vote',    icon:'▲', iconBg:'var(--green-bg)',  iconColor:'var(--green-text)',  badgeBg:'var(--green-bg)',  badgeColor:'var(--green-text)'},
+  vote_down:           {label:'Vote',    icon:'▼', iconBg:'var(--red-bg)',    iconColor:'var(--red-text)',    badgeBg:'var(--red-bg)',    badgeColor:'var(--red-text)'},
+  vote_removed:        {label:'Vote',    icon:'○', iconBg:'var(--bg3)',       iconColor:'var(--text3)',       badgeBg:'var(--bg2)',       badgeColor:'var(--text2)'},
+  comment:             {label:'Comment', icon:'✦', iconBg:'var(--blue-bg)',   iconColor:'var(--blue-text)',   badgeBg:'var(--blue-bg)',   badgeColor:'var(--blue-text)'},
+  reply:               {label:'Reply',   icon:'↩', iconBg:'var(--blue-bg)',   iconColor:'var(--blue-text)',   badgeBg:'var(--blue-bg)',   badgeColor:'var(--blue-text)'},
+  initiative_created:  {label:'New',     icon:'+', iconBg:'var(--green-bg)',  iconColor:'var(--green-text)',  badgeBg:'var(--green-bg)',  badgeColor:'var(--green-text)'},
+  initiative_updated:  {label:'Edit',    icon:'✎', iconBg:'var(--amber-bg)', iconColor:'var(--amber-text)',  badgeBg:'var(--amber-bg)',  badgeColor:'var(--amber-text)'},
+  flag:                {label:'Flagged', icon:'★', iconBg:'var(--amber-bg)', iconColor:'var(--amber-text)',  badgeBg:'var(--amber-bg)',  badgeColor:'var(--amber-text)'},
+  unflag:              {label:'Unflagged',icon:'☆',iconBg:'var(--bg3)',      iconColor:'var(--text3)',       badgeBg:'var(--bg2)',       badgeColor:'var(--text2)'},
+  login:               {label:'Login',   icon:'→', iconBg:'var(--bg3)',       iconColor:'var(--text2)',       badgeBg:'var(--bg2)',       badgeColor:'var(--text2)'},
+};
+
+function logActivity(type, initiativeKey, detail) {
+  const entry = {
+    type,
+    user: who(),
+    initiative_key: initiativeKey||null,
+    detail: detail||null,
+    created_at: new Date().toISOString()
+  };
+  // Optimistically add to local log
+  clLog.unshift(entry);
+  // Save to Supabase async
+  try {
+    db.from('activity_log').insert(entry).then(()=>{}).catch(()=>{});
+  } catch(e){}
+}
+
+async function loadChangelog() {
+  try {
+    const {data} = await db.from('activity_log')
+      .select('*')
+      .order('created_at', {ascending:false})
+      .limit(500);
+    clLog = data||[];
+  } catch(e){ clLog=[]; }
+}
+
+async function openChangelog() {
+  document.getElementById('changelog-mode').classList.add('active');
+  await loadChangelog();
+  populateClUserFilter();
+  renderChangelog();
+}
+function closeChangelog(){ document.getElementById('changelog-mode').classList.remove('active'); }
+
+function populateClUserFilter(){
+  const users=[...new Set(clLog.map(e=>e.user).filter(Boolean))].sort();
+  const sel=document.getElementById('cl-user');
+  const cur=sel.value;
+  sel.innerHTML='<option value="">All users</option>'+users.map(u=>`<option${u===cur?' selected':''}>${u}</option>`).join('');
+}
+
+function applyPeriod(){
+  const p=document.getElementById('cl-period').value;
+  const now=new Date();
+  const fmt=d=>d.toISOString().slice(0,10);
+  const from=document.getElementById('cl-from');
+  const to=document.getElementById('cl-to');
+  if(p==='today'){from.value=to.value=fmt(now);}
+  else if(p==='week'){
+    const d=new Date(now);d.setDate(d.getDate()-d.getDay());
+    from.value=fmt(d);to.value=fmt(now);
+  }
+  else if(p==='month'){
+    from.value=fmt(new Date(now.getFullYear(),now.getMonth(),1));
+    to.value=fmt(now);
+  }
+  else{from.value='';to.value='';}
+  renderChangelog();
+}
+
+function clearClFilters(){
+  document.getElementById('cl-search').value='';
+  document.getElementById('cl-type').value='';
+  document.getElementById('cl-user').value='';
+  document.getElementById('cl-from').value='';
+  document.getElementById('cl-to').value='';
+  document.getElementById('cl-period').value='';
+  renderChangelog();
+}
+
+function getClFiltered(){
+  const s=document.getElementById('cl-search').value.toLowerCase();
+  const type=document.getElementById('cl-type').value;
+  const user=document.getElementById('cl-user').value;
+  const from=document.getElementById('cl-from').value;
+  const to=document.getElementById('cl-to').value;
+
+  return clLog.filter(e=>{
+    if(s && !((e.user||'').toLowerCase().includes(s)||(e.initiative_key||'').toLowerCase().includes(s)||(e.detail||'').toLowerCase().includes(s))) return false;
+    if(type){
+      // group vote types
+      if(type==='vote' && !['vote','vote_down','vote_removed'].includes(e.type)) return false;
+      else if(type!=='vote' && e.type!==type) return false;
+    }
+    if(user && e.user!==user) return false;
+    if(from && e.created_at.slice(0,10)<from) return false;
+    if(to && e.created_at.slice(0,10)>to) return false;
+    return true;
+  });
+}
+
+function fmtTime(ts){
+  const d=new Date(ts);
+  const now=new Date();
+  const diff=now-d;
+  if(diff<60000) return 'just now';
+  if(diff<3600000) return Math.floor(diff/60000)+'m ago';
+  if(diff<86400000) return Math.floor(diff/3600000)+'h ago';
+  if(diff<604800000) return Math.floor(diff/86400000)+'d ago';
+  return d.toLocaleDateString('en-US',{month:'short',day:'numeric',year:d.getFullYear()!==now.getFullYear()?'numeric':undefined});
+}
+
+function fmtDate(ts){
+  const d=new Date(ts);
+  const now=new Date();
+  if(d.toDateString()===now.toDateString()) return 'Today';
+  const y=new Date(now);y.setDate(y.getDate()-1);
+  if(d.toDateString()===y.toDateString()) return 'Yesterday';
+  return d.toLocaleDateString('en-US',{weekday:'long',month:'long',day:'numeric'});
+}
+
+function describeEntry(e){
+  const item=items.find(i=>i.key===e.initiative_key);
+  const title=item?item.title:(e.initiative_key||'an initiative');
+  const key=e.initiative_key;
+  const keyEl=key?`<span class="cl-key" onclick="closeChangelog();setTimeout(()=>toggleExpand('${key}'),50)">${key}</span>`:'';
+
+  switch(e.type){
+    case 'vote':         return {main:`<strong>${e.user}</strong> upvoted ${keyEl}`, detail:title};
+    case 'vote_down':    return {main:`<strong>${e.user}</strong> downvoted ${keyEl}`, detail:title};
+    case 'vote_removed': return {main:`<strong>${e.user}</strong> removed vote on ${keyEl}`, detail:title};
+    case 'comment':      return {main:`<strong>${e.user}</strong> commented on ${keyEl}`, detail:e.detail||title};
+    case 'reply':        return {main:`<strong>${e.user}</strong> replied on ${keyEl}`, detail:e.detail||title};
+    case 'initiative_created': return {main:`<strong>${e.user}</strong> added new initiative ${keyEl}`, detail:e.detail||title};
+    case 'initiative_updated': return {main:`<strong>${e.user}</strong> edited ${keyEl}`, detail:e.detail||title};
+    case 'flag':         return {main:`<strong>${e.user}</strong> flagged ${keyEl} for sync`, detail:title};
+    case 'unflag':       return {main:`<strong>${e.user}</strong> unflagged ${keyEl}`, detail:title};
+    case 'login':        return {main:`<strong>${e.user}</strong> opened the board`, detail:null};
+    default:             return {main:`<strong>${e.user||'Someone'}</strong> ${e.type||'did something'}`, detail:e.detail};
+  }
+}
+
+function renderChangelog(){
+  const filtered=getClFiltered();
+  clPage=0;
+
+  // Stats
+  const today=new Date().toISOString().slice(0,10);
+  const todayCount=filtered.filter(e=>e.created_at.slice(0,10)===today).length;
+  const users=[...new Set(filtered.map(e=>e.user).filter(Boolean))];
+  const votes=filtered.filter(e=>['vote','vote_down'].includes(e.type)).length;
+  const edits=filtered.filter(e=>['initiative_created','initiative_updated'].includes(e.type)).length;
+
+  document.getElementById('cl-stats').innerHTML=`
+    <div class="cl-stat"><div class="cl-stat-lbl">Total entries</div><div class="cl-stat-val">${filtered.length}</div></div>
+    <div class="cl-stat"><div class="cl-stat-lbl">Today</div><div class="cl-stat-val">${todayCount}</div></div>
+    <div class="cl-stat"><div class="cl-stat-lbl">Unique users</div><div class="cl-stat-val">${users.length}</div></div>
+    <div class="cl-stat"><div class="cl-stat-lbl">Votes / edits</div><div class="cl-stat-val">${votes} / ${edits}</div></div>
+  `;
+
+  if(!filtered.length){
+    document.getElementById('cl-timeline').innerHTML='<div class="cl-empty">No entries match your filters.</div>';
+    return;
+  }
+
+  renderClPage(filtered, false);
+}
+
+function renderClPage(filtered, append){
+  const start=clPage*CL_PAGE_SIZE;
+  const page=filtered.slice(start, start+CL_PAGE_SIZE);
+  const hasMore=filtered.length > start+CL_PAGE_SIZE;
+
+  // Group by day
+  const days={};
+  page.forEach(e=>{
+    const day=e.created_at.slice(0,10);
+    if(!days[day]) days[day]=[];
+    days[day].push(e);
+  });
+
+  let html='';
+  Object.entries(days).forEach(([day,entries])=>{
+    html+=`<div class="cl-day-group">
+      <div class="cl-day-label">${fmtDate(day+'T12:00:00')} <span class="cl-day-count">${entries.length} event${entries.length!==1?'s':''}</span></div>`;
+    entries.forEach(e=>{
+      const meta=CL_TYPE_META[e.type]||CL_TYPE_META['login'];
+      const desc=describeEntry(e);
+      html+=`<div class="cl-entry">
+        <div class="cl-icon" style="background:${meta.iconBg};color:${meta.iconColor}">${meta.icon}</div>
+        <div class="cl-body">
+          <div class="cl-top">
+            <div class="cl-action">${desc.main} <span class="cl-type-badge" style="background:${meta.badgeBg};color:${meta.badgeColor}">${meta.label}</span></div>
+            <div class="cl-time">${fmtTime(e.created_at)}</div>
+          </div>
+          ${desc.detail?`<div class="cl-detail">${desc.detail}</div>`:''}
+        </div>
+      </div>`;
+    });
+    html+='</div>';
+  });
+
+  if(hasMore){
+    html+=`<button class="cl-load-more" onclick="clPage++;renderClPage(getClFiltered(),true)">Load more (${filtered.length-start-CL_PAGE_SIZE} remaining)</button>`;
+  }
+
+  const container=document.getElementById('cl-timeline');
+  if(append){ container.innerHTML=container.innerHTML.replace(/<button class="cl-load-more"[^>]*>[^<]*<\/button>/,'')+html; }
+  else { container.innerHTML=html; }
 }
 
 // ── ROADMAP ──────────────────────────────────────────────────────────────────
