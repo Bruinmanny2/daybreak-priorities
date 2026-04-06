@@ -1342,7 +1342,11 @@ function logActivity(type, initiativeKey, detail) {
   };
   clLog.unshift(entry);
   if(!db) return;
-  db.from('activity_log').insert(entry).catch(err=>console.warn('activity_log insert failed:',err.message));
+  // Supabase v2 returns {data, error} not a Promise — use async wrapper
+  (async () => {
+    const {error} = await db.from('activity_log').insert(entry);
+    if(error) console.warn('activity_log insert failed:', error.message, error);
+  })();
 }
 
 async function loadChangelog() {
