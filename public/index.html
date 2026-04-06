@@ -370,6 +370,22 @@
   .tag-filter-chip{font-size:12px;padding:3px 10px;border-radius:999px;cursor:pointer;border:1.5px solid;transition:all .1s}
   .tag-filter-chip.active{font-weight:500}
   .tag-filter-chip:hover{opacity:.8}
+
+  .ms-wrap{position:relative;display:inline-block}
+  .ms-trigger{font-size:13px;padding:7px 10px;border:0.5px solid var(--border2);border-radius:var(--radius);background:var(--bg);color:var(--text);cursor:pointer;font-family:var(--font);white-space:nowrap;min-width:160px;display:flex;align-items:center;justify-content:space-between;gap:6px;user-select:none}
+  .ms-trigger:hover{border-color:var(--border3)}
+  .ms-trigger.active{border-color:var(--border3)}
+  .ms-arrow{font-size:10px;color:var(--text3);flex-shrink:0;transition:transform .15s}
+  .ms-trigger.active .ms-arrow{transform:rotate(180deg)}
+  .ms-dropdown{position:absolute;top:calc(100% + 4px);left:0;min-width:220px;background:var(--bg);border:0.5px solid var(--border3);border-radius:var(--radius-lg);box-shadow:0 4px 16px rgba(0,0,0,0.12);z-index:50;overflow:hidden;display:none}
+  .ms-dropdown.open{display:block}
+  .ms-option{display:flex;align-items:center;gap:8px;padding:8px 12px;cursor:pointer;font-size:13px;color:var(--text);transition:background .1s}
+  .ms-option:hover{background:var(--bg2)}
+  .ms-option input[type=checkbox]{width:14px;height:14px;cursor:pointer;flex-shrink:0;accent-color:var(--text)}
+  .ms-divider{height:0.5px;background:var(--border);margin:4px 0}
+  .ms-clear{font-size:12px;color:var(--text3);padding:6px 12px;cursor:pointer;text-align:center;border-top:0.5px solid var(--border)}
+  .ms-clear:hover{color:var(--text);background:var(--bg2)}
+  .ms-badge{background:var(--text);color:var(--bg);border-radius:999px;font-size:10px;padding:1px 6px;font-weight:500;flex-shrink:0}
 </style>
 </head>
 <body>
@@ -425,17 +441,40 @@
     <div id="tag-filter-bar" style="display:flex;flex-wrap:wrap;gap:6px;margin-bottom:.75rem"></div>
     <div class="ctrl-row">
       <input type="text" id="search" placeholder="Search initiatives..." oninput="render()" />
-      <select id="phase-f" onchange="render()">
-        <option value="">All phases</option>
-        <option value="__flagged__">★ Flagged for sync</option>
-        <option>Ready for Release</option>
-        <option>Testing</option>
-        <option>Development</option>
-        <option>Product Scoping</option>
-        <option>Requirements Ready, Not Started</option>
-        <option>Requirements Not Ready</option>
-        <option>Blocked by Stakeholder</option>
-      </select>
+      <div class="ms-wrap" id="phase-ms-wrap">
+        <div class="ms-trigger" id="phase-ms-trigger" onclick="togglePhaseDropdown()">
+          <span id="phase-ms-label">All phases</span>
+          <span class="ms-arrow">▼</span>
+        </div>
+        <div class="ms-dropdown" id="phase-ms-dropdown">
+          <div class="ms-option" onclick="togglePhaseOpt('__flagged__',this)">
+            <input type="checkbox" id="popt-flagged" /> <label for="popt-flagged" style="cursor:pointer">★ Flagged for sync</label>
+          </div>
+          <div class="ms-divider"></div>
+          <div class="ms-option" onclick="togglePhaseOpt('Ready for Release',this)">
+            <input type="checkbox" id="popt-rfr" /> <label for="popt-rfr" style="cursor:pointer">Ready for Release</label>
+          </div>
+          <div class="ms-option" onclick="togglePhaseOpt('Testing',this)">
+            <input type="checkbox" id="popt-testing" /> <label for="popt-testing" style="cursor:pointer">Testing</label>
+          </div>
+          <div class="ms-option" onclick="togglePhaseOpt('Development',this)">
+            <input type="checkbox" id="popt-dev" /> <label for="popt-dev" style="cursor:pointer">Development</label>
+          </div>
+          <div class="ms-option" onclick="togglePhaseOpt('Product Scoping',this)">
+            <input type="checkbox" id="popt-scoping" /> <label for="popt-scoping" style="cursor:pointer">Product Scoping</label>
+          </div>
+          <div class="ms-option" onclick="togglePhaseOpt('Requirements Ready, Not Started',this)">
+            <input type="checkbox" id="popt-rr" /> <label for="popt-rr" style="cursor:pointer">Requirements Ready, Not Started</label>
+          </div>
+          <div class="ms-option" onclick="togglePhaseOpt('Requirements Not Ready',this)">
+            <input type="checkbox" id="popt-rnr" /> <label for="popt-rnr" style="cursor:pointer">Requirements Not Ready</label>
+          </div>
+          <div class="ms-option" onclick="togglePhaseOpt('Blocked by Stakeholder',this)">
+            <input type="checkbox" id="popt-blocked" /> <label for="popt-blocked" style="cursor:pointer">Blocked by Stakeholder</label>
+          </div>
+          <div class="ms-clear" onclick="clearPhaseFilter()">Clear selection</div>
+        </div>
+      </div>
       <select id="sort-f" onchange="render()">
         <option value="combined">Sort: community rank</option>
         <option value="score">Sort: formula score</option>
@@ -604,6 +643,69 @@ let comments = {};
 let expanded = null;
 let editKey = null;
 
+// ── PHASE MULTISELECT ─────────────────────────────────────────────────────────
+let selectedPhases = new Set();
+
+function togglePhaseDropdown() {
+  const dd = document.getElementById('phase-ms-dropdown');
+  const trigger = document.getElementById('phase-ms-trigger');
+  const isOpen = dd.classList.contains('open');
+  dd.classList.toggle('open');
+  trigger.classList.toggle('active');
+}
+
+function togglePhaseOpt(value, row) {
+  // Prevent double-firing from label click
+  event.stopPropagation();
+  const cb = row.querySelector('input[type=checkbox]');
+  const isChecked = !cb.checked;
+  cb.checked = isChecked;
+  if(isChecked) selectedPhases.add(value);
+  else selectedPhases.delete(value);
+  updatePhaseLabel();
+  render();
+}
+
+function clearPhaseFilter() {
+  selectedPhases.clear();
+  document.querySelectorAll('#phase-ms-dropdown input[type=checkbox]').forEach(cb=>cb.checked=false);
+  updatePhaseLabel();
+  togglePhaseDropdown();
+  render();
+}
+
+function updatePhaseLabel() {
+  const label = document.getElementById('phase-ms-label');
+  const badge = document.getElementById('phase-ms-badge');
+  const trigger = document.getElementById('phase-ms-trigger');
+  if(selectedPhases.size === 0) {
+    label.textContent = 'All phases';
+    if(badge) badge.remove();
+  } else if(selectedPhases.size === 1) {
+    const val = [...selectedPhases][0];
+    label.textContent = val === '__flagged__' ? '★ Flagged for sync' : val;
+    if(badge) badge.remove();
+  } else {
+    label.textContent = 'Phases';
+    if(!document.getElementById('phase-ms-badge')) {
+      const b = document.createElement('span');
+      b.className = 'ms-badge';
+      b.id = 'phase-ms-badge';
+      trigger.insertBefore(b, trigger.lastElementChild);
+    }
+    document.getElementById('phase-ms-badge').textContent = selectedPhases.size;
+  }
+}
+
+// Close dropdown when clicking outside
+document.addEventListener('click', function(e) {
+  const wrap = document.getElementById('phase-ms-wrap');
+  if(wrap && !wrap.contains(e.target)) {
+    document.getElementById('phase-ms-dropdown').classList.remove('open');
+    document.getElementById('phase-ms-trigger').classList.remove('active');
+  }
+});
+
 const ALL_TAGS = [
   {label:"Revenue driving",     color:"#27500a", bg:"#eaf3de", border:"#97c459"},
   {label:"Cost reduction",      color:"#0c447c", bg:"#e6f1fb", border:"#85b7eb"},
@@ -768,21 +870,24 @@ async function init(url,key,name) {
   }
 }
 
-async function loadAll() {
-  const [iRes,vRes,cRes]=await Promise.all([
+async function loadAll(){
+  await loadScoringConfig();
+  const [iRes,vRes,cRes,fRes]=await Promise.all([
     db.from('initiatives').select('*').order('score',{ascending:false}),
     db.from('votes').select('*'),
-    db.from('comments').select('*').order('created_at',{ascending:true})
+    db.from('comments').select('*').order('created_at',{ascending:true}),
+    db.from('sync_flags').select('initiative_key')
   ]);
   items=iRes.data||[];
   votes={};
   (vRes.data||[]).forEach(v=>{if(!votes[v.initiative_key])votes[v.initiative_key]={};votes[v.initiative_key][v.user_name]=v.value;});
   comments={};
   const flat=cRes.data||[];
-  const top=flat.filter(c=>!c.parent_id);
-  top.forEach(c=>{if(!comments[c.initiative_key])comments[c.initiative_key]=[];comments[c.initiative_key].push({...c,replies:flat.filter(r=>r.parent_id===c.id)});});
-  populateRequestorFilter();
-  render();
+  flat.filter(c=>!c.parent_id).forEach(c=>{if(!comments[c.initiative_key])comments[c.initiative_key]=[];comments[c.initiative_key].push({...c,replies:flat.filter(r=>r.parent_id===c.id)});});
+  // Load flags
+  flagged=new Set();
+  (fRes.data||[]).forEach(r=>flagged.add(r.initiative_key));
+  populateRequestorFilter();renderTagFilterBar();render();
 }
 
 function subscribeRealtime() {
@@ -791,12 +896,16 @@ function subscribeRealtime() {
 
 function getFiltered() {
   const s=document.getElementById('search').value.toLowerCase();
-  const ph=document.getElementById('phase-f').value;
+  const ph=''; // phase now handled by selectedPhases set
   const so=document.getElementById('sort-f').value;
   const rq=document.getElementById('req-f').value;
   let list=items.filter(i=>{
     const ms=!s||i.title.toLowerCase().includes(s)||i.key.toLowerCase().includes(s)||i.requestor.toLowerCase().includes(s);
-    const mf=ph==='__flagged__'?flagged.has(i.key):(!ph||i.phase===ph);
+    let mf;
+    if(selectedPhases.size===0) { mf=true; }
+    else if(selectedPhases.has('__flagged__')&&selectedPhases.size===1) { mf=flagged.has(i.key); }
+    else if(selectedPhases.has('__flagged__')) { mf=flagged.has(i.key)||selectedPhases.has(i.phase); }
+    else { mf=selectedPhases.has(i.phase); }
     const mt=activeTagFilters.size===0||((()=>{const t=i.tags?JSON.parse(i.tags||'[]'):[];return [...activeTagFilters].every(f=>t.includes(f));})());
     return ms&&mf&&mt&&(!rq||i.requestor===rq);
   });
@@ -1157,9 +1266,11 @@ let flagged = new Set();
 
 async function loadFlagged() {
   try {
-    const {data} = await db.from('sync_flags').select('initiative_key');
+    const {data, error} = await db.from('sync_flags').select('initiative_key');
+    if(error) { console.error('sync_flags load error:', error.message); return; }
+    flagged = new Set();
     if(data) data.forEach(r=>flagged.add(r.initiative_key));
-  } catch(e) { /* table may not exist yet */ }
+  } catch(e) { console.error('loadFlagged exception:', e.message); }
 }
 
 async function toggleFlag(key, e) {
@@ -1167,11 +1278,13 @@ async function toggleFlag(key, e) {
   const isFlagged = flagged.has(key);
   if(isFlagged) {
     flagged.delete(key);
-    try { await db.from('sync_flags').delete().eq('initiative_key',key); } catch(e){}
+    const {error} = await db.from('sync_flags').delete().eq('initiative_key',key);
+    if(error) console.error('sync_flags delete error:', error.message);
     logActivity('unflag',key,null);
   } else {
     flagged.add(key);
-    try { await db.from('sync_flags').insert({initiative_key:key,flagged_by:who(),flagged_at:new Date().toISOString()}); } catch(e){}
+    const {error} = await db.from('sync_flags').insert({initiative_key:key,flagged_by:who(),flagged_at:new Date().toISOString()});
+    if(error) console.error('sync_flags insert error:', error.message);
     logActivity('flag',key,null);
   }
   render();
@@ -1222,27 +1335,25 @@ const CL_TYPE_META = {
 function logActivity(type, initiativeKey, detail) {
   const entry = {
     type,
-    user: who(),
+    user_name: who(),
     initiative_key: initiativeKey||null,
     detail: detail||null,
     created_at: new Date().toISOString()
   };
-  // Optimistically add to local log
   clLog.unshift(entry);
-  // Save to Supabase async
-  try {
-    db.from('activity_log').insert(entry).then(()=>{}).catch(()=>{});
-  } catch(e){}
+  if(!db) return;
+  db.from('activity_log').insert(entry).catch(err=>console.warn('activity_log insert failed:',err.message));
 }
 
 async function loadChangelog() {
   try {
-    const {data} = await db.from('activity_log')
+    const {data, error} = await db.from('activity_log')
       .select('*')
       .order('created_at', {ascending:false})
       .limit(500);
+    if(error) { console.error('activity_log load error:', error.message); clLog=[]; return; }
     clLog = data||[];
-  } catch(e){ clLog=[]; }
+  } catch(e) { console.error('loadChangelog exception:', e.message); clLog=[]; }
 }
 
 async function openChangelog() {
@@ -1254,7 +1365,7 @@ async function openChangelog() {
 function closeChangelog(){ document.getElementById('changelog-mode').classList.remove('active'); }
 
 function populateClUserFilter(){
-  const users=[...new Set(clLog.map(e=>e.user).filter(Boolean))].sort();
+  const users=[...new Set(clLog.map(e=>e.user_name||e.user).filter(Boolean))].sort();
   const sel=document.getElementById('cl-user');
   const cur=sel.value;
   sel.innerHTML='<option value="">All users</option>'+users.map(u=>`<option${u===cur?' selected':''}>${u}</option>`).join('');
@@ -1297,13 +1408,14 @@ function getClFiltered(){
   const to=document.getElementById('cl-to').value;
 
   return clLog.filter(e=>{
-    if(s && !((e.user||'').toLowerCase().includes(s)||(e.initiative_key||'').toLowerCase().includes(s)||(e.detail||'').toLowerCase().includes(s))) return false;
+    const eu=(e.user_name||e.user||'').toLowerCase();
+    if(s && !(eu.includes(s)||(e.initiative_key||'').toLowerCase().includes(s)||(e.detail||'').toLowerCase().includes(s))) return false;
     if(type){
       // group vote types
       if(type==='vote' && !['vote','vote_down','vote_removed'].includes(e.type)) return false;
       else if(type!=='vote' && e.type!==type) return false;
     }
-    if(user && e.user!==user) return false;
+    if(user && (e.user_name||e.user)!==user) return false;
     if(from && e.created_at.slice(0,10)<from) return false;
     if(to && e.created_at.slice(0,10)>to) return false;
     return true;
@@ -1330,14 +1442,14 @@ function fmtDate(ts){
   return d.toLocaleDateString('en-US',{weekday:'long',month:'long',day:'numeric'});
 }
 
-function describeEntry(e){
+function describeEntry(e){ e.user = e.user||e.user_name||'Someone';
   const item=items.find(i=>i.key===e.initiative_key);
   const title=item?item.title:(e.initiative_key||'an initiative');
   const key=e.initiative_key;
   const keyEl=key?`<span class="cl-key" onclick="closeChangelog();setTimeout(()=>toggleExpand('${key}'),50)">${key}</span>`:'';
 
   switch(e.type){
-    case 'vote':         return {main:`<strong>${e.user}</strong> upvoted ${keyEl}`, detail:title};
+    case 'vote':         return {main:`<strong>${e.user_name||e.user}</strong> upvoted ${keyEl}`, detail:title};
     case 'vote_down':    return {main:`<strong>${e.user}</strong> downvoted ${keyEl}`, detail:title};
     case 'vote_removed': return {main:`<strong>${e.user}</strong> removed vote on ${keyEl}`, detail:title};
     case 'comment':      return {main:`<strong>${e.user}</strong> commented on ${keyEl}`, detail:e.detail||title};
@@ -1358,7 +1470,7 @@ function renderChangelog(){
   // Stats
   const today=new Date().toISOString().slice(0,10);
   const todayCount=filtered.filter(e=>e.created_at.slice(0,10)===today).length;
-  const users=[...new Set(filtered.map(e=>e.user).filter(Boolean))];
+  const users=[...new Set(filtered.map(e=>e.user_name||e.user).filter(Boolean))];
   const votes=filtered.filter(e=>['vote','vote_down'].includes(e.type)).length;
   const edits=filtered.filter(e=>['initiative_created','initiative_updated'].includes(e.type)).length;
 
